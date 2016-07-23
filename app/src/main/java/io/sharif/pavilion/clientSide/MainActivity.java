@@ -2,6 +2,8 @@ package io.sharif.pavilion.clientSide;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
@@ -15,7 +17,12 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
+import java.io.File;
+
 import io.sharif.pavilion.R;
+import io.sharif.pavilion.activities.HelpActivity;
+import io.sharif.pavilion.activities.SendProblemActivity;
+import io.sharif.pavilion.activities.SettingsActivity;
 import io.sharif.pavilion.model.ServerObj;
 import io.sharif.pavilion.network.Utilities.Utility;
 import io.sharif.pavilion.serverSide.ServerActivity;
@@ -42,8 +49,8 @@ public class MainActivity extends AppCompatActivity
             public void onClick(View view) {
                 Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
-                Intent myIntent = new Intent(MainActivity.this,ServerActivity.class);
-                startActivity(myIntent);
+//                Intent myIntent = new Intent(MainActivity.this,ServerActivity.class);
+//                startActivity(myIntent);
             }
         });
 
@@ -167,19 +174,36 @@ public void onBackPressed() {
         // Handle navigation view item clicks here.
         int id = item.getItemId();
 
-        if (id == R.id.nav_camera) {
-            // Handle the camera action
-        } else if (id == R.id.nav_gallery) {
+        if (id == R.id.start_server) {
+            Intent myIntent = new Intent(MainActivity.this,ServerActivity.class);
+            startActivity(myIntent);
+        } else if (id == R.id.nav_send_problem) {
+            Intent myIntent = new Intent(MainActivity.this,SendProblemActivity.class);
+            startActivity(myIntent);
+        } else if (id == R.id.nav_send_app) {
 
-        } else if (id == R.id.nav_slideshow) {
+            // Get current ApplicationInfo to find .apk path
+            ApplicationInfo app = getApplicationContext().getApplicationInfo();
+            String filePath = app.sourceDir;
+            Intent intent = new Intent(Intent.ACTION_SEND);
+            // MIME of .apk is "application/vnd.android.package-archive".
+            // but Bluetooth does not accept this. Let's use "*/*" instead.
+            intent.setType("*/*");
+            // Only use Bluetooth to send .apk
+            // intent.setPackage("com.android.bluetooth");
+            // Append file and send Intent
+            intent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(new File(filePath)));
+            startActivity(Intent.createChooser(intent, getResources().getString(R.string.ic_menu_send_app)));
 
-        } else if (id == R.id.nav_manage) {
+        } else if (id == R.id.nav_guide) {
+            Intent myIntent = new Intent(MainActivity.this,HelpActivity.class);
+            startActivity(myIntent);
 
-        } else if (id == R.id.nav_share) {
-
-        } else if (id == R.id.nav_send) {
-
+        }  else if (id == R.id.nav_settings) {
+            Intent myIntent = new Intent(MainActivity.this,SettingsActivity.class);
+            startActivity(myIntent);
         }
+
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
