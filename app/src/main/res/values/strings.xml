@@ -17,4 +17,25 @@
     <string name="server_name_hint">نام سرور با حروف کوچک انگلیسی</string>
     <string name="state">وضعیت</string>
 
+
+    <string name="ic_menu_send_problem">ارسال مشکل</string>
+    <string name="ic_menu_send_app">ارسال برنامه به دوستان</string>
+    <string name="ic_menu_guid">راهنما و سوالات متداول</string>
+    <string name="ic_menu_vote">نظر به برنامه</string>
+    <string name="ic_menu_settings">تنظیمات</string>
+
+    <string name="problem_subject">موضوع: مشکل در برنامه</string>
+
+    <string name="title_activity_send_problem">SendProblemActivity</string>
+    <string name="title_activity_settings">تنظیمات</string>
+
+    <string name="q1question">متن سوال اول</string>
+    <string name="q2question">متن سوال دوم</string>
+    <string name="q3question">متن سوال سوم</string>
+
+    <string name="q1message">متن توضیحی سوال اول</string>
+    <string name="q2message">متن توضیحی سوال دوم</string>
+    <string name="q3message">متن توضیحی سوال سوم</string>
+
+    <string name="email">esmaeil414@gmail.com</string>
 </resources>

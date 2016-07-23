@@ -51,7 +51,6 @@ public class HeadlinesFragment extends Fragment {
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
 
-        int layout = android.R.layout.simple_list_item_activated_1;  //not not available before honeycomb
 
         headRecyclerView= (RecyclerView) getView().findViewById(R.id.head_recyclerview);
         activity= (MainActivity) getActivity();
@@ -60,7 +59,9 @@ public class HeadlinesFragment extends Fragment {
 
         adapter = new MyAdapterC(serverObjs,activity,activity);
         headRecyclerView.setAdapter(adapter);
+        //TODO layoutManager:
         headRecyclerView.setLayoutManager(new LinearLayoutManager(activity));
+//        headRecyclerView.setLayoutManager(new StaggeredGridLayoutManager(2, 1));
 
 //        setListAdapter(new ArrayAdapter<String>(getActivity(),layout,data));
 
