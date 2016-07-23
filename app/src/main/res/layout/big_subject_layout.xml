@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="@dimen/small_margin"
+    android:background="@color/big_subject_background"
+    android:elevation="@dimen/typical_elevation"
+    >
+<TextView
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:textColor="@color/bit_title_color"
+    android:text="عنوان مطلب"
+    android:textSize="@dimen/big_title_size"
+    android:padding="@dimen/typical_padding"
+    android:id="@+id/big_title"/>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:id="@+id/big_layout_for_smalls">
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@android:color/transparent"
+    >
+<ImageButton
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_alignParentLeft="true"
+    android:src="@drawable/ic_delete_forever_black_24dp"
+    android:background="@android:color/transparent"
+    android:layout_marginRight="@dimen/small_margin"
+    android:layout_marginLeft="@dimen/small_margin"
+    android:layout_marginTop="@dimen/small_margin"
+    android:id="@+id/delete_icon"/>
+
+
+</RelativeLayout>

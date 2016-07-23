@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="@dimen/small_margin"
+    android:background="@color/small_subject_background"
+    android:elevation="@dimen/typical_elevation"
+    android:id="@+id/main_layout">
+    <include layout="@layout/deletelayout"/>
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/title_color"
+        android:text="عنوان مطلب"
+        android:textSize="@dimen/small_title_size"
+        android:paddingLeft="@dimen/typical_padding"
+        android:paddingRight="@dimen/typical_padding"
+        android:paddingTop="@dimen/typical_padding"
+        android:id="@+id/small_title"/>
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:shadowColor="@color/gray_text"
+        android:text="این مطلب برای نمنونه تایت پشده است بعدا این متن را به صورت کامل پاک کنید با تشکر و احترام و دیگه از این طرفا رد نشید لطفا دوستان دستتون درد نکنه \n من از این جا \n برو بیخیال اگر تونستی بیا ما همینه همین جا هستنیم  و منتظر شما می مانیم"
+        android:padding="@dimen/small_margin"
+        android:textSize="@dimen/text_size"
+        android:id="@+id/small_text"
+        />
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/file_layout"
+        >
+        <ImageButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent"
+            android:src="@drawable/ic_attach_file_black_24dp"
+            android:layout_alignParentRight="true"
+            android:layout_margin="@dimen/small_margin"
+            android:id="@+id/attach_button"
+            />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/no_file"
+            android:padding="@dimen/typical_padding"
+            android:textColor="@color/level6"
+            android:layout_toLeftOf="@id/attach_button"
+            android:layout_margin="@dimen/small_margin"
+            android:layout_centerHorizontal="true"
+            android:gravity="center"
+            android:id="@+id/file_tv"/>
+
+    </RelativeLayout>
+</LinearLayout>
