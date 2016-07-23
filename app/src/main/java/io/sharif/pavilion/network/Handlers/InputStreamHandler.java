@@ -84,9 +84,9 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
 
                 while (!Thread.currentThread().isInterrupted()) {
 
-                    readBytes = totalLength = fileReadBytes = 0;
-
                     temp_int = dataInputStream.readInt();
+
+                    readBytes = totalLength = fileReadBytes = 0;
 
                     if (receiveMessageListener != null) {
                         Utility.postOnMainThread(new Runnable() {
