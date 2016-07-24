@@ -47,7 +47,13 @@ public class ClientDevice {
     }
 
     public void setSocket(Socket socket) {
-        this.socket = socket;
+        synchronized (closeSocketLock) {
+            synchronized (inputStreamLock) {
+                synchronized (outputStreamLock) {
+                    this.socket = socket;
+                }
+            }
+        }
     }
 
     public InputStream getInputStream() {
