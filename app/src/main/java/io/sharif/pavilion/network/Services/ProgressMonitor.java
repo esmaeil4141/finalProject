@@ -13,12 +13,12 @@ public class ProgressMonitor {
 
     private long total, current, diff;
     private GetMonitorData monitorData;
-    private boolean disabled;
+    private volatile boolean disabled;
     private ReceiveMessageListener receiveMessageListener;
     private SendMessageListener sendMessageListener;
     private MonitorRole role;
 
-    public static long UPDATE_INTERVAL = 2000;
+    public static long UPDATE_INTERVAL = 100;
 
     public ProgressMonitor(Thread thread, ReceiveMessageListener receiveMessageListener) {
         try {
