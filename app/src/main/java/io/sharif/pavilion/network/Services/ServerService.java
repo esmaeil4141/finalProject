@@ -320,39 +320,6 @@ public class ServerService extends BroadcastReceiver {
         return null;
     }
 
-    /**
-     * This method is used to obtain mac and ip addresses of connected clients by reading ARP table located in /proc/net/arp file.
-     * @param onlyReachables {@code false} if the list should contain unreachable (probably disconnected) clients, {@code true} otherwise
-     * @return a pair containing the bufferedReader and list of clients
-     * @throws IOException throws when fails to read the file
-     */
-    private Pair<BufferedReader, List<ClientDevice>> readARPs(boolean onlyReachables) throws IOException{
-
-        final List<ClientDevice> result = new ArrayList<>();
-
-        BufferedReader br = new BufferedReader(new FileReader("/proc/net/arp"));
-
-        String line;
-        while ((line = br.readLine()) != null) {
-            String[] splitted = line.split(" +");
-
-            if (splitted.length >= 4) {
-
-                String mac = splitted[3];
-
-                if (mac.matches("..:..:..:..:..:..") && !mac.equals("00:00:00:00:00:00")) {
-                    boolean isReachable = InetAddress.getByName(splitted[0])
-                            .isReachable(REACHABLE_TIMEOUT);
-
-                    if (!onlyReachables || isReachable)
-                        result.add(new ClientDevice(splitted[0], splitted[3], isReachable));
-                }
-            }
-        }
-
-        return Pair.create(br, result);
-    }
-
     private void closeClients() {
         for (ClientDevice clientDevice : clientsList)
             clientDevice.closetSocket();
@@ -532,6 +499,39 @@ public class ServerService extends BroadcastReceiver {
 
             }
 
+        }
+
+        /**
+         * This method is used to obtain mac and ip addresses of connected clients by reading ARP table located in /proc/net/arp file.
+         * @param onlyReachables {@code false} if the list should contain unreachable (probably disconnected) clients, {@code true} otherwise
+         * @return a pair containing the bufferedReader and list of clients
+         * @throws IOException throws when fails to read the file
+         */
+        private Pair<BufferedReader, List<ClientDevice>> readARPs(boolean onlyReachables) throws IOException{
+
+            final List<ClientDevice> result = new ArrayList<>();
+
+            BufferedReader br = new BufferedReader(new FileReader("/proc/net/arp"));
+
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] splitted = line.split(" +");
+
+                if (splitted.length >= 4) {
+
+                    String mac = splitted[3];
+
+                    if (mac.matches("..:..:..:..:..:..") && !mac.equals("00:00:00:00:00:00")) {
+                        boolean isReachable = InetAddress.getByName(splitted[0])
+                                .isReachable(REACHABLE_TIMEOUT);
+
+                        if (!onlyReachables || isReachable)
+                            result.add(new ClientDevice(splitted[0], splitted[3], isReachable));
+                    }
+                }
+            }
+
+            return Pair.create(br, result);
         }
 
         /**

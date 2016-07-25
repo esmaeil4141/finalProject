@@ -9,8 +9,8 @@ public class ClientDevice {
 
     private OutputStream outputStream;
     private InputStream inputStream;
-    private String ipAddr, hWAddr;
-    private boolean isReachable;
+    private volatile String ipAddr, hWAddr;
+    private volatile boolean isReachable;
     private Socket socket;
 
     private final Object outputStreamLock;
