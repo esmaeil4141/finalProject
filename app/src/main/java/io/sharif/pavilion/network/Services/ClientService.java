@@ -48,8 +48,7 @@ public class ClientService extends BroadcastReceiver {
 
     private State networkCurrentState;
 
-    private AtomicBoolean receiverRegistered;
-    private boolean scanRequested;
+    private boolean receiverRegistered, scanRequested;
     private int networkID = -1;
 
     public ClientService(Context context,
@@ -67,18 +66,21 @@ public class ClientService extends BroadcastReceiver {
         this.wifiIntentFilter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
         this.wifiIntentFilter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
         this.wifiIntentFilter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
-        this.receiverRegistered = new AtomicBoolean();
     }
 
     public ActionResult start() {
-        if (receiverRegistered.compareAndSet(false, true))
+        if (!receiverRegistered) {
+            receiverRegistered = true;
             context.registerReceiver(this, wifiIntentFilter);
+        }
         return ActionResult.SUCCESS;
     }
 
     public ActionResult stop() {
-        if (receiverRegistered.compareAndSet(true, false))
+        if (receiverRegistered) {
+            receiverRegistered = false;
             context.unregisterReceiver(this);
+        }
         return ActionResult.SUCCESS;
     }
 
@@ -133,12 +135,8 @@ public class ClientService extends BroadcastReceiver {
 
             } else if (WifiManager.SCAN_RESULTS_AVAILABLE_ACTION.equals(action)) {
 
-                boolean temp = scanRequested;
-
-                scanRequested = false;
-
-                if (wifiScanListener != null && temp) {
-
+                if (wifiScanListener != null && scanRequested) {
+                    scanRequested = false;
                     List<ScanResult> scanResults = wifiManager.getScanResults();
                     List<ApInfo> serversList = new ArrayList<>();
 
@@ -256,7 +254,7 @@ public class ClientService extends BroadcastReceiver {
     }
 
     // scan for available servers, when servers list is available onWifiScanFinished listener is called
-    public synchronized ActionResult scan() {
+    public ActionResult scan() {
         if (wifiManager != null && !scanRequested) {
             scanRequested = wifiManager.startScan();
             return scanRequested ? ActionResult.SUCCESS : ActionResult.FAILURE;
@@ -271,7 +269,7 @@ public class ClientService extends BroadcastReceiver {
     }
 
     // connect to a server
-    public synchronized ActionResult join(ApInfo apInfo) {
+    public ActionResult join(ApInfo apInfo) {
         if (wifiManager != null && isApInfoValid(apInfo)) {
 
             WifiConfiguration wifiConfig = new WifiConfiguration();
