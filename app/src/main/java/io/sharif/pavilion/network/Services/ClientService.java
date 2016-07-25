@@ -17,10 +17,9 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import io.sharif.pavilion.network.DataStructures.ApInfo;
 import io.sharif.pavilion.network.DataStructures.Message;
 import io.sharif.pavilion.network.Handlers.InputStreamHandler;
@@ -29,7 +28,6 @@ import io.sharif.pavilion.network.Listeners.ReceiveMessageListener;
 import io.sharif.pavilion.network.Listeners.SendMessageListener;
 import io.sharif.pavilion.network.Listeners.WifiListener;
 import io.sharif.pavilion.network.Listeners.WifiScanListener;
-import io.sharif.pavilion.network.StateControllers.ClientStateController;
 import io.sharif.pavilion.network.Utilities.ActionResult;
 import io.sharif.pavilion.network.Utilities.Utility;
 
@@ -50,11 +48,9 @@ public class ClientService extends BroadcastReceiver {
 
     private State networkCurrentState;
 
-    private boolean receiverRegistered;
+    private AtomicBoolean receiverRegistered;
     private boolean scanRequested;
     private int networkID = -1;
-
-    private ClientStateController clientStateController;
 
     public ClientService(Context context,
                          WifiScanListener wifiScanListener,
@@ -71,22 +67,18 @@ public class ClientService extends BroadcastReceiver {
         this.wifiIntentFilter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
         this.wifiIntentFilter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
         this.wifiIntentFilter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
+        this.receiverRegistered = new AtomicBoolean();
     }
 
     public ActionResult start() {
-        if (!receiverRegistered) {
+        if (receiverRegistered.compareAndSet(false, true))
             context.registerReceiver(this, wifiIntentFilter);
-            receiverRegistered = true;
-        }
         return ActionResult.SUCCESS;
     }
 
     public ActionResult stop() {
-        if (receiverRegistered) {
-            receiverRegistered = false;
+        if (receiverRegistered.compareAndSet(true, false))
             context.unregisterReceiver(this);
-        }
-        disconnect();
         return ActionResult.SUCCESS;
     }
 
@@ -223,7 +215,7 @@ public class ClientService extends BroadcastReceiver {
         return ActionResult.FAILURE;
     }
 
-    private ActionResult closeServerConnection() {
+    public ActionResult closeServerConnection() {
         if (clientListener != null)
             Utility.postOnMainThread(new Runnable() {
                 @Override
@@ -279,7 +271,7 @@ public class ClientService extends BroadcastReceiver {
     }
 
     // connect to a server
-    public synchronized ActionResult connect(ApInfo apInfo) {
+    public synchronized ActionResult join(ApInfo apInfo) {
         if (wifiManager != null && isApInfoValid(apInfo)) {
 
             WifiConfiguration wifiConfig = new WifiConfiguration();
@@ -296,9 +288,8 @@ public class ClientService extends BroadcastReceiver {
     }
 
     // disconnect from currently connected server
-    public synchronized ActionResult disconnect() {
-        return (closeServerConnection() == ActionResult.SUCCESS)
-                && wifiManager != null && networkID != -1 && wifiManager.removeNetwork(networkID)
+    public synchronized ActionResult leave() {
+        return wifiManager != null && networkID != -1 && wifiManager.removeNetwork(networkID)
                 && wifiManager.saveConfiguration() ? ActionResult.SUCCESS : ActionResult.FAILURE;
     }
 

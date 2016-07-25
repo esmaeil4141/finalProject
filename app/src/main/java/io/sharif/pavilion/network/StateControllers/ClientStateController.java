@@ -75,7 +75,7 @@ public class ClientStateController {
         this.currentState = ClientState.IDLE;
     }
 
-    public boolean checkAndReturn(ClientState state) {
+    public synchronized boolean checkAndReturn(ClientState state) {
         List<ClientState> list = stateMachine.get(state);
         for (ClientState clientState : list) {
             if (currentState == clientState)
@@ -84,7 +84,11 @@ public class ClientStateController {
         return false;
     }
 
-    public void setCurrentState(ClientState state) {
+    public synchronized void setCurrentState(ClientState state) {
         this.currentState = state;
+    }
+
+    public synchronized ClientState getCurrentState() {
+        return currentState;
     }
 }
