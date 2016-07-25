@@ -39,12 +39,12 @@ public class ClientService extends BroadcastReceiver {
     private final WifiManager wifiManager;
     private final Context context;
 
+    private DataOutputStream serverDataOutputStream;
+    private DataInputStream serverDataInputStream;
     public String connectedSSID, serverIP;
     private Socket serverSocket;
-    private DataInputStream serverDataInputStream;
-    private DataOutputStream serverDataOutputStream;
 
-    private State currentState;
+    private State networkCurrentState;
 
     private boolean receiverRegistered;
     private boolean scanRequested;
@@ -66,7 +66,7 @@ public class ClientService extends BroadcastReceiver {
         this.wifiIntentFilter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
     }
 
-    public synchronized ActionResult start() {
+    public ActionResult start() {
         if (!receiverRegistered) {
             context.registerReceiver(this, wifiIntentFilter);
             receiverRegistered = true;
@@ -74,7 +74,7 @@ public class ClientService extends BroadcastReceiver {
         return ActionResult.SUCCESS;
     }
 
-    public synchronized ActionResult stop() {
+    public ActionResult stop() {
         if (receiverRegistered) {
             context.unregisterReceiver(this);
             receiverRegistered = false;
@@ -98,10 +98,10 @@ public class ClientService extends BroadcastReceiver {
 
                     State state = networkInfo.getState();
 
-                    if (currentState == state) {
+                    if (networkCurrentState == state) {
                         // ignore multiple identical events
                     } else {
-                        currentState = state;
+                        networkCurrentState = state;
                         if (state == State.CONNECTED) {
                             connectedSSID = getWifiName();
                             if (connectedSSID != null && connectedSSID.startsWith(ServerService.SSID_PREFIX)) {

@@ -143,7 +143,7 @@ pr("onProgress_ progress:"+progress+" speed:"+speed+ "  totalSize:"+totalSize+" 
 
                     @Override
                     public void onReceiveFailure(ActionResult errorCode) {
-
+pr("onReceiveFailure_errorCode:"+errorCode);
                     }
                 });
         clientService.start();
