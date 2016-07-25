@@ -17,6 +17,9 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import io.sharif.pavilion.network.DataStructures.ApInfo;
 import io.sharif.pavilion.network.DataStructures.Message;
@@ -26,6 +29,7 @@ import io.sharif.pavilion.network.Listeners.ReceiveMessageListener;
 import io.sharif.pavilion.network.Listeners.SendMessageListener;
 import io.sharif.pavilion.network.Listeners.WifiListener;
 import io.sharif.pavilion.network.Listeners.WifiScanListener;
+import io.sharif.pavilion.network.StateControllers.ClientStateController;
 import io.sharif.pavilion.network.Utilities.ActionResult;
 import io.sharif.pavilion.network.Utilities.Utility;
 
@@ -50,6 +54,8 @@ public class ClientService extends BroadcastReceiver {
     private boolean scanRequested;
     private int networkID = -1;
 
+    private ClientStateController clientStateController;
+
     public ClientService(Context context,
                          WifiScanListener wifiScanListener,
                          ClientListener clientListener,
@@ -64,6 +70,7 @@ public class ClientService extends BroadcastReceiver {
         this.wifiIntentFilter = new IntentFilter();
         this.wifiIntentFilter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
         this.wifiIntentFilter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
+        this.wifiIntentFilter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
     }
 
     public ActionResult start() {
@@ -76,8 +83,8 @@ public class ClientService extends BroadcastReceiver {
 
     public ActionResult stop() {
         if (receiverRegistered) {
-            context.unregisterReceiver(this);
             receiverRegistered = false;
+            context.unregisterReceiver(this);
         }
         disconnect();
         return ActionResult.SUCCESS;
