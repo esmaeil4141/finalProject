@@ -42,7 +42,7 @@ public class ClientService extends BroadcastReceiver {
 
     private DataOutputStream serverDataOutputStream;
     private DataInputStream serverDataInputStream;
-    private String connectedSSID, serverIP;
+    private volatile String connectedSSID, serverIP;
     private Socket serverSocket;
 
     private State networkCurrentState;
