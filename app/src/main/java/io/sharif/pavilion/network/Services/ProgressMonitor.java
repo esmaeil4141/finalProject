@@ -18,7 +18,7 @@ public class ProgressMonitor {
     private SendMessageListener sendMessageListener;
     private MonitorRole role;
 
-    public static long UPDATE_INTERVAL = 100;
+    public static final int UPDATE_INTERVAL = 100;
 
     public ProgressMonitor(Thread thread, ReceiveMessageListener receiveMessageListener) {
         try {
@@ -61,8 +61,8 @@ public class ProgressMonitor {
 
                         if (diff >= 0) {
 
-                            if (role == MonitorRole.SENDER) {
-                                if (sendMessageListener != null) {
+                            if (role == MonitorRole.SENDER)
+                                if (sendMessageListener != null)
                                     Utility.postOnMainThread(new Runnable() {
                                         @Override
                                         public void run() {
@@ -71,22 +71,16 @@ public class ProgressMonitor {
                                             sendMessageListener.onProgress(progress, speed, total, current);
                                         }
                                     });
-                                }
-                            }
-
-                            if (role == MonitorRole.RECEIVER) {
-                                if (receiveMessageListener != null) {
-                                    Utility.postOnMainThread(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            float progress = Utility.calculateProgress(total, current);
-                                            float speed = Utility.calculateSpeed(UPDATE_INTERVAL, diff);
-                                            receiveMessageListener.onProgress(progress, speed, total, current);
-                                        }
-                                    });
-                                }
-                            }
-
+                            else if (role == MonitorRole.RECEIVER)
+                                    if (receiveMessageListener != null)
+                                        Utility.postOnMainThread(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                float progress = Utility.calculateProgress(total, current);
+                                                float speed = Utility.calculateSpeed(UPDATE_INTERVAL, diff);
+                                                receiveMessageListener.onProgress(progress, speed, total, current);
+                                            }
+                                        });
                         }
 
                     } catch (InterruptedException e) {
@@ -99,15 +93,17 @@ public class ProgressMonitor {
 
     public void enableUpdate() {
         disabled = false;
-        if (monitorData != null) {
-            this.total = monitorData.getTotalBytes();
-            this.current = monitorData.getSentBytes();
-            if (total != 0 && current <= total &&
-                    (role == MonitorRole.RECEIVER && receiveMessageListener != null) ||
-                    (role == MonitorRole.SENDER && sendMessageListener != null)
-                    )
-                start();
-        }
+        if (monitorData == null) return;
+
+        this.total = monitorData.getTotalBytes();
+        this.current = monitorData.getSentBytes();
+
+        if (total == 0 || current > total) return;
+
+        if (role == MonitorRole.RECEIVER && receiveMessageListener == null) return;
+        if (role == MonitorRole.SENDER && sendMessageListener == null) return;
+
+        start();
     }
 
     public void disableUpdate() {

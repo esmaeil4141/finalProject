@@ -7,6 +7,8 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicLong;
+
 import io.sharif.pavilion.network.DataStructures.Message;
 import io.sharif.pavilion.network.Listeners.SendMessageListener;
 import io.sharif.pavilion.network.Utilities.ActionResult;
@@ -20,7 +22,7 @@ public class MessageSender extends Thread implements ProgressMonitor.GetMonitorD
     private final DataOutputStream dataOutputStream;
     private final SendMessageListener sendMessageListener;
 
-    private long totalLength, bytesSent;
+    private AtomicLong totalLength, bytesSent;
 
     private File file;
     private ProgressMonitor progressMonitor;
@@ -34,43 +36,45 @@ public class MessageSender extends Thread implements ProgressMonitor.GetMonitorD
         this.message = message;
         this.dataOutputStream = dataOutputStream;
         this.sendMessageListener = sendMessageListener;
+        this.totalLength = new AtomicLong();
+        this.bytesSent = new AtomicLong();
     }
 
     @Override
     public long getTotalBytes() {
-        return totalLength;
+        return totalLength.get();
     }
 
     @Override
     public long getSentBytes() {
-        return bytesSent;
+        return bytesSent.get();
     }
 
     @Override
     public void run() {
 
-        totalLength = Utility.getMessageTotalLength(message);
+        totalLength.set(Utility.getMessageTotalLength(message));
 
-        if (totalLength > 0) {
+        if (totalLength.get() > 0) { // no race condition here so no need to make the expression atomic
 
             try {
 
                 String address;
 
-                bytesSent = 0;
+                bytesSent.set(0);
 
                 progressMonitor = new ProgressMonitor(this, sendMessageListener);
                 progressMonitor.enableUpdate();
 
                 dataOutputStream.writeInt(message.getID());
-                dataOutputStream.writeLong(totalLength);
+                dataOutputStream.writeLong(totalLength.get());
 
                 if (message.getMessage() == null) message.setMessage("");
 
                 String msg = message.getMessage();
 
                 dataOutputStream.writeUTF(msg);
-                bytesSent += msg.getBytes("UTF-8").length;
+                bytesSent.addAndGet(msg.getBytes("UTF-8").length);
 
                 if (message.getFileUris() != null) {
 
@@ -137,7 +141,7 @@ public class MessageSender extends Thread implements ProgressMonitor.GetMonitorD
 
                         dataOutputStream.write(buffer, 0, len);
 
-                        bytesSent += len;
+                        bytesSent.addAndGet(len);
                     }
 
                     fileInputStream.close();

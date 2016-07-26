@@ -98,6 +98,8 @@ public class ClientService extends BroadcastReceiver {
 
         if (serverIP == null) return ActionResult.FAILURE;
 
+        final ClientService that = this;
+
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -110,6 +112,7 @@ public class ClientService extends BroadcastReceiver {
                             serverDataInputStream,
                             receiveMessageListener,
                             clientListener,
+                            that,
                             connectedSSID
                     ).start();
 
