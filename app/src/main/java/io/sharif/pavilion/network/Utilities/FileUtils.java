@@ -16,6 +16,7 @@ package io.sharif.pavilion.network.Utilities;
  * limitations under the License.
  */
 
+import android.annotation.TargetApi;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Context;
@@ -255,6 +256,7 @@ public class FileUtils {
      * @see #getFile(Context, Uri)
      * @author paulburke
      */
+    @TargetApi(Build.VERSION_CODES.KITKAT)
     public static String getPath(final Context context, final Uri uri) {
 
         if (DEBUG)
