@@ -12,6 +12,7 @@ import io.sharif.pavilion.network.DataStructures.Message;
 import io.sharif.pavilion.network.Listeners.ClientListener;
 import io.sharif.pavilion.network.Listeners.ReceiveMessageListener;
 import io.sharif.pavilion.network.Listeners.ServerListener;
+import io.sharif.pavilion.network.Services.ClientService;
 import io.sharif.pavilion.network.Services.ProgressMonitor;
 import io.sharif.pavilion.network.Utilities.ActionResult;
 import io.sharif.pavilion.network.Utilities.Utility;
@@ -27,6 +28,7 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
     private boolean folderIsPresent = true;
     private String baseAddress, fileName, fileExtension, connectedSSID, suffix;
     private ClientDevice clientDevice;
+    private ClientService clientService;
     private byte[] buffer = new byte[Utility.getTcpSegmentSize()*3];
     private File folder, file;
 
@@ -41,10 +43,12 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
     public InputStreamHandler(DataInputStream dataInputStream,
                               ReceiveMessageListener receiveMessageListener,
                               ClientListener clientListener,
+                              ClientService clientService,
                               String connectedSSID) {
         this.dataInputStream = dataInputStream;
         this.receiveMessageListener = receiveMessageListener;
         this.clientListener = clientListener;
+        this.clientService = clientService;
         this.connectedSSID = connectedSSID;
         this.role = HandlerRole.CLIENT;
     }
@@ -76,6 +80,7 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
         if (dataInputStream == null) return;
         if (role == HandlerRole.SERVER && clientDevice == null) return;
         if (role == HandlerRole.CLIENT && connectedSSID == null) return;
+        if (role == HandlerRole.CLIENT && clientService == null) return;
 
         try {
 
@@ -111,15 +116,10 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
 
                 if (readBytes < totalLength) { // it means that we have at least one file in message
 
-                    if (role == HandlerRole.CLIENT) {
-
+                    if (role == HandlerRole.CLIENT)
                         if (suffix == null) suffix = Utility.getServerName(connectedSSID);
-
-                    } else if (role == HandlerRole.SERVER) {
-
+                    else if (role == HandlerRole.SERVER)
                         if (suffix == null) suffix = String.valueOf(Utility.ipToLong(clientDevice.getIpAddr()));
-
-                    }
 
                     if (baseAddress == null) baseAddress = Utility.getAppFolderPath() + suffix;
 
@@ -142,7 +142,7 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
                     }
                 }
 
-                if (role == HandlerRole.CLIENT) {
+                if (role == HandlerRole.CLIENT)
                     if (clientListener != null)
                         Utility.postOnMainThread(new Runnable() {
                             @Override
@@ -150,7 +150,7 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
                                 clientListener.onMessageReceived(message);
                             }
                         });
-                } else if (role == HandlerRole.SERVER) {
+                else if (role == HandlerRole.SERVER)
                     if (serverListener != null)
                         Utility.postOnMainThread(new Runnable() {
                             @Override
@@ -158,7 +158,6 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
                                 serverListener.onMessageReceived(clientDevice.getID(), message);
                             }
                         });
-                }
             }
 
         } catch (IOException | NullPointerException e) {
@@ -177,7 +176,11 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
                             serverListener.onClientDisconnected(clientDevice);
                         }
                     });
+
             } else if (role == HandlerRole.CLIENT) {
+
+                clientService.closeServerConnection();
+
                 if (clientListener != null)
                     Utility.postOnMainThread(new Runnable() {
                         @Override
@@ -194,6 +197,7 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
                         receiveMessageListener.onReceiveFailure(ActionResult.FAILURE);
                     }
                 });
+
         } finally {
             progressMonitor.disableUpdate();
         }
