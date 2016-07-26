@@ -73,128 +73,129 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
     @Override
     public void run() {
 
-        if (dataInputStream != null && !(role == HandlerRole.SERVER && clientDevice == null)) {
+        if (dataInputStream == null) return;
+        if (role == HandlerRole.SERVER && clientDevice == null) return;
+        if (role == HandlerRole.CLIENT && connectedSSID == null) return;
 
-            try {
+        try {
 
-                progressMonitor = new ProgressMonitor(this, receiveMessageListener);
+            progressMonitor = new ProgressMonitor(this, receiveMessageListener);
 
-                int temp_int;
-                boolean readFileResult;
+            int temp_int;
+            boolean readFileResult;
 
-                while (!Thread.currentThread().isInterrupted()) {
+            while (!Thread.currentThread().isInterrupted()) {
 
-                    temp_int = dataInputStream.readInt();
+                temp_int = dataInputStream.readInt();
 
-                    readBytes = totalLength = fileReadBytes = 0;
+                readBytes = totalLength = fileReadBytes = 0;
 
-                    if (receiveMessageListener != null) {
-                        Utility.postOnMainThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                receiveMessageListener.onReceiveStart();
-                            }
-                        });
-                    }
-
-                    final Message message = new Message(temp_int);
-
-                    totalLength = dataInputStream.readLong();
-
-                    progressMonitor.enableUpdate();
-
-                    message.setMessage(dataInputStream.readUTF());
-
-                    readBytes += message.getMessage().getBytes("UTF-8").length;
-
-                    if (readBytes < totalLength) { // it means that we have at least one file in message
-
-                        if (role == HandlerRole.CLIENT) {
-
-                            if (suffix == null) suffix = Utility.getServerName(connectedSSID);
-
-                        } else if (role == HandlerRole.SERVER) {
-
-                            if (suffix == null) suffix = String.valueOf(Utility.ipToLong(clientDevice.getIpAddr()));
-
+                if (receiveMessageListener != null) {
+                    Utility.postOnMainThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            receiveMessageListener.onReceiveStart();
                         }
+                    });
+                }
 
-                        if (baseAddress == null) baseAddress = Utility.getAppFolderPath() + suffix;
+                final Message message = new Message(temp_int);
 
-                        if (folder == null) folder = new File(baseAddress);
+                totalLength = dataInputStream.readLong();
 
-                        if (!folder.exists()) folderIsPresent = folder.mkdir();
+                progressMonitor.enableUpdate();
 
-                        if (folderIsPresent) {
+                message.setMessage(dataInputStream.readUTF());
 
-                            while (readBytes < totalLength) {
+                readBytes += message.getMessage().getBytes("UTF-8").length;
 
-                                fileReadBytes = 0;
-
-                                readFileResult = readFile();
-
-                                if (readFileResult)
-                                    message.addUri(Uri.fromFile(file));
-
-                            }
-                        }
-                    }
+                if (readBytes < totalLength) { // it means that we have at least one file in message
 
                     if (role == HandlerRole.CLIENT) {
-                        if (clientListener != null)
-                            Utility.postOnMainThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    clientListener.onMessageReceived(message);
-                                }
-                            });
+
+                        if (suffix == null) suffix = Utility.getServerName(connectedSSID);
+
                     } else if (role == HandlerRole.SERVER) {
-                        if (serverListener != null)
-                            Utility.postOnMainThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    serverListener.onMessageReceived(clientDevice.getID(), message);
-                                }
-                            });
+
+                        if (suffix == null) suffix = String.valueOf(Utility.ipToLong(clientDevice.getIpAddr()));
+
+                    }
+
+                    if (baseAddress == null) baseAddress = Utility.getAppFolderPath() + suffix;
+
+                    if (folder == null) folder = new File(baseAddress);
+
+                    if (!folder.exists()) folderIsPresent = folder.mkdir();
+
+                    if (folderIsPresent) {
+
+                        while (readBytes < totalLength) {
+
+                            fileReadBytes = 0;
+
+                            readFileResult = readFile();
+
+                            if (readFileResult)
+                                message.addUri(Uri.fromFile(file));
+
+                        }
                     }
                 }
 
-            } catch (IOException | NullPointerException e) {
-                e.printStackTrace();
-
-                // TODO: check failure reason to whether call onReceivedFailure or onClientDisconnect
-
-                if (role == HandlerRole.SERVER) {
-
-                    clientDevice.closetSocket();
-
-                    if (serverListener != null)
-                        Utility.postOnMainThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                serverListener.onClientDisconnected(clientDevice);
-                            }
-                        });
-                } else if (role == HandlerRole.CLIENT) {
+                if (role == HandlerRole.CLIENT) {
                     if (clientListener != null)
                         Utility.postOnMainThread(new Runnable() {
                             @Override
                             public void run() {
-                                clientListener.onDisconnected();
+                                clientListener.onMessageReceived(message);
+                            }
+                        });
+                } else if (role == HandlerRole.SERVER) {
+                    if (serverListener != null)
+                        Utility.postOnMainThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                serverListener.onMessageReceived(clientDevice.getID(), message);
                             }
                         });
                 }
+            }
 
-                if (receiveMessageListener != null)
+        } catch (IOException | NullPointerException e) {
+            e.printStackTrace();
+
+            // TODO: check failure reason to whether call onReceivedFailure or onClientDisconnect
+
+            if (role == HandlerRole.SERVER) {
+
+                clientDevice.closetSocket();
+
+                if (serverListener != null)
                     Utility.postOnMainThread(new Runnable() {
                         @Override
                         public void run() {
-                            receiveMessageListener.onReceiveFailure(ActionResult.FAILURE);
+                            serverListener.onClientDisconnected(clientDevice);
                         }
                     });
-            } finally {
-                progressMonitor.disableUpdate();
+            } else if (role == HandlerRole.CLIENT) {
+                if (clientListener != null)
+                    Utility.postOnMainThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            clientListener.onDisconnected();
+                        }
+                    });
             }
+
+            if (receiveMessageListener != null)
+                Utility.postOnMainThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        receiveMessageListener.onReceiveFailure(ActionResult.FAILURE);
+                    }
+                });
+        } finally {
+            progressMonitor.disableUpdate();
         }
 
     }

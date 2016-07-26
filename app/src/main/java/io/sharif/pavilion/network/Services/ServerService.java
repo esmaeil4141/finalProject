@@ -90,28 +90,26 @@ public class ServerService extends BroadcastReceiver {
      * @return {@code SUCCESS} if config is valid and operation succeeds, {@code FAILURE} otherwise
      */
     public ActionResult start() {
-        if (isConfigValid() && !isWifiApEnabled) {
+        if (!isConfigValid() || isWifiApEnabled) return ActionResult.FAILURE;
 
-            if (!receiverRegistered) {
-                this.context.registerReceiver(this, apIntentFilter);
-                receiverRegistered = true;
-            }
+        if (!receiverRegistered) {
+            this.context.registerReceiver(this, apIntentFilter);
+            receiverRegistered = true;
+        }
 
-            clientScanner = new ClientScanner();
-            clientScanner.start();
+        clientScanner = new ClientScanner();
+        clientScanner.start();
 
-            callServerStart = true;
+        callServerStart = true;
 
-            if (wifiConfigChanged) {
-                wifiConfigChanged = false;
-                WifiConfiguration wifiConfiguration = getNewConfig();
-                return enableWifiAp(wifiConfiguration, true) ? ActionResult.SUCCESS : ActionResult.FAILURE;
-            } else {
-                return enableWifiAp(null, true) ? ActionResult.SUCCESS : ActionResult.FAILURE;
-            }
+        WifiConfiguration wifiConfiguration = null;
 
-        } else
-            return ActionResult.FAILURE;
+        if (wifiConfigChanged) {
+            wifiConfigChanged = false;
+            wifiConfiguration = getNewConfig();
+        }
+
+        return enableWifiAp(wifiConfiguration, true) ? ActionResult.SUCCESS : ActionResult.FAILURE;
     }
 
     /**
@@ -201,19 +199,15 @@ public class ServerService extends BroadcastReceiver {
      * @return {@code FAILURE} if name is null or empty, {@code SUCCESS} otherwise
      */
     public ActionResult setApName(String name) {
-        if (name != null && !name.trim().equals("")) {
-            this.name = name;
-            this.wifiConfigChanged = true;
-            return ActionResult.SUCCESS;
-        } else
-            return ActionResult.FAILURE;
+        if (name == null || name.trim().equals("")) return ActionResult.FAILURE;
+        this.name = name;
+        this.wifiConfigChanged = true;
+        return ActionResult.SUCCESS;
     }
 
     public ActionResult sendMessage(String clientID,
                                     Message message,
                                     final SendMessageListener sendMessageListener) {
-
-
         if (message != null) {
 
             ClientDevice clientDevice = getClient(clientID);
@@ -275,23 +269,19 @@ public class ServerService extends BroadcastReceiver {
      * @return a list of clientDevice objects
      */
     public List<ClientDevice> getClientsList(final boolean onlyReachables) {
-
         List<ClientDevice> newList = new ArrayList<>();
-
         for (ClientDevice clientDevice: this.clientsList) {
             if (!onlyReachables || clientDevice.isReachable())
                 newList.add(clientDevice);
         }
-
         return newList;
     }
 
     private ClientDevice getClient(String clientID) {
-
         for (ClientDevice clientDevice : this.clientsList)
-        if (clientDevice != null && clientDevice.getID() != null &&
+            if (clientDevice != null && clientDevice.getID() != null &&
                 clientDevice.getID().equals(clientID))
-            return clientDevice;
+                return clientDevice;
 
         return null;
     }
@@ -302,7 +292,6 @@ public class ServerService extends BroadcastReceiver {
     }
 
     public ActionResult closeServerSocket() {
-
         if (serverSocket != null) {
             closeClients();
             try {
@@ -311,12 +300,10 @@ public class ServerService extends BroadcastReceiver {
                 e.printStackTrace();
             }
         }
-
         return ActionResult.SUCCESS;
     }
 
     private ClientDevice setClientSocket(String clientIP, Socket clientSocket) {
-
         for (ClientDevice clientDevice : clientsList) {
             if (clientDevice != null
                     && clientDevice.isReachable() && clientDevice.getIpAddr() != null
@@ -325,22 +312,22 @@ public class ServerService extends BroadcastReceiver {
                 return clientDevice;
             }
         }
-
         return null;
     }
 
     public ActionResult createServerSocket() {
 
-        Runnable runnable = new Runnable() {
+        new Thread(new Runnable() {
             @Override
             public void run() {
-
+                boolean socketCreated = false;
                 try {
 
                     Socket clientSocket;
                     InetAddress inetAddress;
 
                     serverSocket = new ServerSocket(SERVER_PORT);
+                    socketCreated = true;
 
                     if (serverListener != null)
                         Utility.postOnMainThread(new Runnable() {
@@ -380,20 +367,26 @@ public class ServerService extends BroadcastReceiver {
 
                 } catch (IOException | NullPointerException e) {
                     e.printStackTrace();
-                    if (serverListener != null)
-                        Utility.postOnMainThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                serverListener.onSocketClosed();
-                            }
-                        });
+                    if (serverListener != null) {
+                        if (socketCreated)
+                            Utility.postOnMainThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    serverListener.onSocketClosed();
+                                }
+                            });
+                        else
+                            Utility.postOnMainThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    serverListener.onSocketCreateFailure();
+                                }
+                            });
+                    }
+
                 }
-
             }
-        };
-
-        Thread serverSocketThread = new Thread(runnable);
-        serverSocketThread.start();
+        }).start();
 
         return ActionResult.SUCCESS;
     }

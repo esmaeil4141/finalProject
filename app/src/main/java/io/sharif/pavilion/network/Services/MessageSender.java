@@ -105,10 +105,10 @@ public class MessageSender extends Thread implements ProgressMonitor.GetMonitorD
                             sendMessageListener.onFailure(ActionResult.FAILURE);
                         }
                     });
+            } finally {
+                progressMonitor.disableUpdate();
             }
         }
-
-        progressMonitor.disableUpdate();
     }
 
     private boolean sendFile() throws IOException {
