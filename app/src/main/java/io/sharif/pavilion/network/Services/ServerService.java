@@ -19,7 +19,12 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import io.sharif.pavilion.network.DataStructures.ClientDevice;
 import io.sharif.pavilion.network.DataStructures.Message;
@@ -57,7 +62,6 @@ public class ServerService extends BroadcastReceiver {
     private boolean wifiConfigChanged, isWifiApEnabled, receiverRegistered, callServerStart;
 
     private final ReceiveMessageListener receiveMessageListener;
-    private final List<ClientDevice> clientsList;
     private final ServerListener serverListener;
     private final IntentFilter apIntentFilter;
     private final WifiListener wifiListener;
@@ -79,7 +83,6 @@ public class ServerService extends BroadcastReceiver {
         this.apIntentFilter = new IntentFilter();
         this.apIntentFilter.addAction(WIFI_AP_STATE_CHANGED_ACTION);
         this.apIntentFilter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
-        this.clientsList = new ArrayList<>();
 
         enableWifiAp(null, false); // disable hotspot on app start
     }
@@ -210,7 +213,7 @@ public class ServerService extends BroadcastReceiver {
                                     final SendMessageListener sendMessageListener) {
         if (message != null) {
 
-            ClientDevice clientDevice = getClient(clientID);
+            ClientDevice clientDevice = clientScanner.getClient(clientID);
             if (clientDevice != null) {
 
                 OutputStream outputStream = clientDevice.getOutputStream();
@@ -269,31 +272,14 @@ public class ServerService extends BroadcastReceiver {
      * @return a list of clientDevice objects
      */
     public List<ClientDevice> getClientsList(final boolean onlyReachables) {
-        List<ClientDevice> newList = new ArrayList<>();
-        for (ClientDevice clientDevice: this.clientsList) {
-            if (!onlyReachables || clientDevice.isReachable())
-                newList.add(clientDevice);
-        }
-        return newList;
+        return clientScanner.getClientsList(onlyReachables);
     }
 
-    private ClientDevice getClient(String clientID) {
-        for (ClientDevice clientDevice : this.clientsList)
-            if (clientDevice != null && clientDevice.getID() != null &&
-                clientDevice.getID().equals(clientID))
-                return clientDevice;
 
-        return null;
-    }
-
-    private void closeClients() {
-        for (ClientDevice clientDevice : clientsList)
-            clientDevice.closetSocket();
-    }
 
     public ActionResult closeServerSocket() {
         if (serverSocket != null) {
-            closeClients();
+            clientScanner.closeClients();
             try {
                 serverSocket.close();
             } catch (IOException | NullPointerException e) {
@@ -301,18 +287,6 @@ public class ServerService extends BroadcastReceiver {
             }
         }
         return ActionResult.SUCCESS;
-    }
-
-    private ClientDevice setClientSocket(String clientIP, Socket clientSocket) {
-        for (ClientDevice clientDevice : clientsList) {
-            if (clientDevice != null
-                    && clientDevice.isReachable() && clientDevice.getIpAddr() != null
-                    && clientDevice.getIpAddr().equals(clientIP)) {
-                clientDevice.setSocket(clientSocket);
-                return clientDevice;
-            }
-        }
-        return null;
     }
 
     public ActionResult createServerSocket() {
@@ -344,7 +318,7 @@ public class ServerService extends BroadcastReceiver {
                         inetAddress = clientSocket.getInetAddress();
                         if (inetAddress != null) {
 
-                            final ClientDevice newClient = setClientSocket(inetAddress.getHostAddress(), clientSocket);
+                            final ClientDevice newClient = clientScanner.setClientSocket(inetAddress.getHostAddress(), clientSocket);
 
                             if (newClient != null) {
                                 if (serverListener != null)
@@ -437,15 +411,10 @@ public class ServerService extends BroadcastReceiver {
      */
     public class ClientScanner extends Thread {
 
-        private final String searchCommand = "search";
-        private final String addCommand = "add";
-
-        private final ServerListener serverListener;
-        private final int scanClientInterval;
+        private final CopyOnWriteArrayList<ClientDevice> clientsList;
 
         public ClientScanner() {
-            this.serverListener = ServerService.this.serverListener;
-            this.scanClientInterval = ServerService.this.SCAN_CLIENT_INTERVAL;
+            this.clientsList  = new CopyOnWriteArrayList<>();
         }
 
         /**
@@ -470,7 +439,7 @@ public class ServerService extends BroadcastReceiver {
 
                     handleScanResult(scanResult);
 
-                    Thread.sleep(this.scanClientInterval);
+                    Thread.sleep(SCAN_CLIENT_INTERVAL);
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -481,9 +450,42 @@ public class ServerService extends BroadcastReceiver {
                         e.printStackTrace();
                     }
                 }
-
             }
 
+        }
+
+        private ClientDevice getClient(String clientID) {
+            Iterator<ClientDevice> iterator = clientsList.iterator();
+            ClientDevice clientDevice;
+            while (iterator.hasNext()) {
+                clientDevice = iterator.next();
+                if (clientDevice != null && clientDevice.getID() != null && clientDevice.getID().equals(clientID))
+                    return clientDevice;
+            }
+            return null;
+        }
+
+        private void closeClients() {
+            Iterator<ClientDevice> iterator = clientsList.iterator();
+            ClientDevice clientDevice;
+            while (iterator.hasNext()) {
+                clientDevice = iterator.next();
+                clientDevice.closetSocket();
+            }
+        }
+
+        private ClientDevice setClientSocket(String clientIP, Socket clientSocket) {
+            Iterator<ClientDevice> iterator = clientsList.iterator();
+            ClientDevice clientDevice;
+            while (iterator.hasNext()) {
+                clientDevice = iterator.next();
+                if (clientDevice.isReachable() && clientDevice.getIpAddr() != null
+                        && clientDevice.getIpAddr().equals(clientIP)) {
+                    clientDevice.setSocket(clientSocket);
+                    return clientDevice;
+                }
+            }
+            return null;
         }
 
         /**
@@ -519,6 +521,18 @@ public class ServerService extends BroadcastReceiver {
             return Pair.create(br, result);
         }
 
+        private List<ClientDevice> getClientsList(final boolean onlyReachables) {
+            List<ClientDevice> newList = new ArrayList<>();
+            Iterator<ClientDevice> iterator = clientsList.iterator();
+            ClientDevice clientDevice;
+            while (iterator.hasNext()) {
+                clientDevice = iterator.next();
+                if (!onlyReachables || clientDevice.isReachable())
+                    newList.add(clientDevice);
+            }
+            return newList;
+        }
+
         /**
          * This method handles clients scan result. This method compares the newly list of clients with the stored list to
          * detect new client or the clients who has left the network.
@@ -533,7 +547,7 @@ public class ServerService extends BroadcastReceiver {
 
             for (final ClientDevice device: list) {
 
-                client = listAction(searchCommand, device);
+                client = getClient(device.getID());
 
                 if (client != null) {
 
@@ -565,7 +579,7 @@ public class ServerService extends BroadcastReceiver {
 
                 } else {
 
-                    listAction(addCommand, device); // add currently connected device to the list
+                    clientsList.add(device);
 
                     if (serverListener != null)
                         Utility.postOnMainThread(new Runnable() {
@@ -579,29 +593,6 @@ public class ServerService extends BroadcastReceiver {
 
             return ActionResult.SUCCESS;
         }
-
-        /**
-         * This method is used to search a client in the list or add a new client to the list.
-         * @param command command string, add or search
-         * @param device ClientDevice object to search or add
-         * @return ClientDevice object on search command, null on add command
-         */
-        private ClientDevice listAction(String command, ClientDevice device) {
-
-            if (device != null) {
-                if (command.equals(searchCommand)) { // search by device id
-                    for (ClientDevice clientDevice : ServerService.this.clientsList) {
-                        if (clientDevice.getID().equals(device.getID()))
-                            return clientDevice;
-                    }
-                } else if (command.equals(addCommand)) {
-                    ServerService.this.clientsList.add(device);
-                }
-            }
-
-            return null;
-        }
-
     }
 
 }

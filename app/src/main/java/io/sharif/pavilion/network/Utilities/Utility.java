@@ -28,10 +28,6 @@ public class Utility {
         return TCP_SEGMENT_SIZE;
     }
 
-    public static String getAppFolderName() {
-        return appFolderName;
-    }
-
     public static void debugPrint(String str) {
         Log.d("myTag", str);
     }
