@@ -1,5 +1,7 @@
 package io.sharif.pavilion.network.Services;
 
+import android.content.Context;
+
 import io.sharif.pavilion.network.Listeners.ReceiveMessageListener;
 import io.sharif.pavilion.network.Listeners.SendMessageListener;
 import io.sharif.pavilion.network.Utilities.Utility;
@@ -17,12 +19,14 @@ public class ProgressMonitor {
     private ReceiveMessageListener receiveMessageListener;
     private SendMessageListener sendMessageListener;
     private MonitorRole role;
+    private Context context;
 
     public static final int UPDATE_INTERVAL = 100;
 
-    public ProgressMonitor(Thread thread, ReceiveMessageListener receiveMessageListener) {
+    public ProgressMonitor(Context context, Thread thread, ReceiveMessageListener receiveMessageListener) {
         try {
             this.monitorData = (GetMonitorData) thread;
+            this.context = context;
             this.receiveMessageListener = receiveMessageListener;
             this.role = MonitorRole.RECEIVER;
         } catch (ClassCastException e) {
@@ -30,9 +34,10 @@ public class ProgressMonitor {
         }
     }
 
-    public ProgressMonitor(Thread thread, SendMessageListener sendMessageListener) {
+    public ProgressMonitor(Context context, Thread thread, SendMessageListener sendMessageListener) {
         try {
             this.monitorData = (GetMonitorData) thread;
+            this.context = context;
             this.sendMessageListener = sendMessageListener;
             this.role = MonitorRole.SENDER;
         } catch (ClassCastException e) {
@@ -63,7 +68,7 @@ public class ProgressMonitor {
 
                             if (role == MonitorRole.SENDER)
                                 if (sendMessageListener != null)
-                                    Utility.postOnMainThread(new Runnable() {
+                                    Utility.postOnMainThread(context, new Runnable() {
                                         @Override
                                         public void run() {
                                             float progress = Utility.calculateProgress(total, current);
@@ -73,7 +78,7 @@ public class ProgressMonitor {
                                     });
                             else if (role == MonitorRole.RECEIVER)
                                     if (receiveMessageListener != null)
-                                        Utility.postOnMainThread(new Runnable() {
+                                        Utility.postOnMainThread(context, new Runnable() {
                                             @Override
                                             public void run() {
                                                 float progress = Utility.calculateProgress(total, current);

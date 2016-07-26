@@ -304,7 +304,7 @@ public class ServerService extends BroadcastReceiver {
                     socketCreated = true;
 
                     if (serverListener != null)
-                        Utility.postOnMainThread(new Runnable() {
+                        Utility.postOnMainThread(context, new Runnable() {
                             @Override
                             public void run() {
                                 serverListener.onSocketCreated();
@@ -322,7 +322,7 @@ public class ServerService extends BroadcastReceiver {
 
                             if (newClient != null) {
                                 if (serverListener != null)
-                                    Utility.postOnMainThread(new Runnable() {
+                                    Utility.postOnMainThread(context, new Runnable() {
                                         @Override
                                         public void run() {
                                             serverListener.onClientConnected(newClient);
@@ -330,6 +330,7 @@ public class ServerService extends BroadcastReceiver {
                                     });
 
                                 new InputStreamHandler(
+                                        context,
                                         new DataInputStream(newClient.getInputStream()),
                                         receiveMessageListener,
                                         serverListener,
@@ -343,14 +344,14 @@ public class ServerService extends BroadcastReceiver {
                     e.printStackTrace();
                     if (serverListener != null) {
                         if (socketCreated)
-                            Utility.postOnMainThread(new Runnable() {
+                            Utility.postOnMainThread(context, new Runnable() {
                                 @Override
                                 public void run() {
                                     serverListener.onSocketClosed();
                                 }
                             });
                         else
-                            Utility.postOnMainThread(new Runnable() {
+                            Utility.postOnMainThread(context, new Runnable() {
                                 @Override
                                 public void run() {
                                     serverListener.onSocketCreateFailure();
@@ -560,7 +561,7 @@ public class ServerService extends BroadcastReceiver {
                             client.setIpAddr(device.getIpAddr());
 
                             if (serverListener != null)
-                                Utility.postOnMainThread(new Runnable() {
+                                Utility.postOnMainThread(context, new Runnable() {
                                     @Override
                                     public void run() {
                                         serverListener.onClientJoined(device);
@@ -568,7 +569,7 @@ public class ServerService extends BroadcastReceiver {
                                 });
                         } else { // client has left
                             if (serverListener != null)
-                                Utility.postOnMainThread(new Runnable() {
+                                Utility.postOnMainThread(context, new Runnable() {
                                     @Override
                                     public void run() {
                                         serverListener.onClientLeft(device);
@@ -582,7 +583,7 @@ public class ServerService extends BroadcastReceiver {
                     clientsList.add(device);
 
                     if (serverListener != null)
-                        Utility.postOnMainThread(new Runnable() {
+                        Utility.postOnMainThread(context, new Runnable() {
                             @Override
                             public void run() {
                                 serverListener.onClientJoined(device);

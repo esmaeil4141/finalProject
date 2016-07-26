@@ -109,6 +109,7 @@ public class ClientService extends BroadcastReceiver {
                     serverDataOutputStream = new DataOutputStream(serverSocket.getOutputStream());
 
                     new InputStreamHandler(
+                            context,
                             serverDataInputStream,
                             receiveMessageListener,
                             clientListener,
@@ -117,7 +118,7 @@ public class ClientService extends BroadcastReceiver {
                     ).start();
 
                     if (clientListener != null)
-                        Utility.postOnMainThread(new Runnable() {
+                        Utility.postOnMainThread(context, new Runnable() {
                             @Override
                             public void run() {
                                 clientListener.onConnected();
@@ -127,7 +128,7 @@ public class ClientService extends BroadcastReceiver {
                 } catch (IOException | NullPointerException e) {
                     e.printStackTrace();
                     if (clientListener != null)
-                        Utility.postOnMainThread(new Runnable() {
+                        Utility.postOnMainThread(context, new Runnable() {
                             @Override
                             public void run() {
                                 clientListener.onConnectionFailure();

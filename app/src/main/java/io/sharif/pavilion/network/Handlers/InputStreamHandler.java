@@ -1,5 +1,6 @@
 package io.sharif.pavilion.network.Handlers;
 
+import android.content.Context;
 import android.net.Uri;
 
 import java.io.DataInputStream;
@@ -42,11 +43,15 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
     private ClientListener clientListener;
     private ServerListener serverListener;
 
-    public InputStreamHandler(DataInputStream dataInputStream,
+    private final Context context;
+
+    public InputStreamHandler(Context context,
+                              DataInputStream dataInputStream,
                               ReceiveMessageListener receiveMessageListener,
                               ClientListener clientListener,
                               ClientService clientService,
                               String connectedSSID) {
+        this.context = context;
         this.dataInputStream = dataInputStream;
         this.receiveMessageListener = receiveMessageListener;
         this.clientListener = clientListener;
@@ -55,10 +60,12 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
         this.role = HandlerRole.CLIENT;
     }
 
-    public InputStreamHandler(DataInputStream dataInputStream,
+    public InputStreamHandler(Context context,
+                              DataInputStream dataInputStream,
                               ReceiveMessageListener receiveMessageListener,
                               ServerListener serverListener,
                               ClientDevice clientDevice) {
+        this.context = context;
         this.dataInputStream = dataInputStream;
         this.receiveMessageListener = receiveMessageListener;
         this.serverListener = serverListener;
@@ -88,7 +95,7 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
 
             totalLength = new AtomicLong();
             readBytes = new AtomicLong();
-            progressMonitor = new ProgressMonitor(this, receiveMessageListener);
+            progressMonitor = new ProgressMonitor(context, this, receiveMessageListener);
 
             int temp_int;
             boolean readFileResult;
@@ -102,7 +109,7 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
                 fileReadBytes = 0;
 
                 if (receiveMessageListener != null) {
-                    Utility.postOnMainThread(new Runnable() {
+                    Utility.postOnMainThread(context, new Runnable() {
                         @Override
                         public void run() {
                             receiveMessageListener.onReceiveStart();
@@ -154,7 +161,7 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
 
                 if (role == HandlerRole.CLIENT) {
                     if (clientListener != null)
-                        Utility.postOnMainThread(new Runnable() {
+                        Utility.postOnMainThread(context, new Runnable() {
                             @Override
                             public void run() {
                                 clientListener.onMessageReceived(message);
@@ -163,7 +170,7 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
                 }
                 else if (role == HandlerRole.SERVER)
                     if (serverListener != null)
-                        Utility.postOnMainThread(new Runnable() {
+                        Utility.postOnMainThread(context, new Runnable() {
                             @Override
                             public void run() {
                                 serverListener.onMessageReceived(clientDevice.getID(), message);
@@ -181,7 +188,7 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
                 clientDevice.closetSocket();
 
                 if (serverListener != null)
-                    Utility.postOnMainThread(new Runnable() {
+                    Utility.postOnMainThread(context, new Runnable() {
                         @Override
                         public void run() {
                             serverListener.onClientDisconnected(clientDevice);
@@ -193,7 +200,7 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
                 clientService.closeServerConnection();
 
                 if (clientListener != null)
-                    Utility.postOnMainThread(new Runnable() {
+                    Utility.postOnMainThread(context, new Runnable() {
                         @Override
                         public void run() {
                             clientListener.onDisconnected();
@@ -202,7 +209,7 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
             }
 
             if (receiveMessageListener != null)
-                Utility.postOnMainThread(new Runnable() {
+                Utility.postOnMainThread(context, new Runnable() {
                     @Override
                     public void run() {
                         receiveMessageListener.onReceiveFailure(ActionResult.FAILURE);

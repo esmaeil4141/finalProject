@@ -53,7 +53,7 @@ public class MessageSender extends Thread implements ProgressMonitor.GetMonitorD
     @Override
     public void run() {
 
-        totalLength.set(Utility.getMessageTotalLength(message));
+        totalLength.set(Utility.getMessageTotalLength(context, message));
 
         if (totalLength.get() > 0) { // no race condition here so no need to make the expression atomic
 
@@ -63,7 +63,7 @@ public class MessageSender extends Thread implements ProgressMonitor.GetMonitorD
 
                 bytesSent.set(0);
 
-                progressMonitor = new ProgressMonitor(this, sendMessageListener);
+                progressMonitor = new ProgressMonitor(context, this, sendMessageListener);
                 progressMonitor.enableUpdate();
 
                 dataOutputStream.writeInt(message.getID());
@@ -93,7 +93,7 @@ public class MessageSender extends Thread implements ProgressMonitor.GetMonitorD
                 }
 
                 if (sendMessageListener != null)
-                    Utility.postOnMainThread(new Runnable() {
+                    Utility.postOnMainThread(context, new Runnable() {
                         @Override
                         public void run() {
                             sendMessageListener.onMessageSent(message.getID());
@@ -103,7 +103,7 @@ public class MessageSender extends Thread implements ProgressMonitor.GetMonitorD
             } catch (IOException | NullPointerException e) {
                 e.printStackTrace();
                 if (sendMessageListener != null)
-                    Utility.postOnMainThread(new Runnable() {
+                    Utility.postOnMainThread(context, new Runnable() {
                         @Override
                         public void run() {
                             sendMessageListener.onFailure(ActionResult.FAILURE);

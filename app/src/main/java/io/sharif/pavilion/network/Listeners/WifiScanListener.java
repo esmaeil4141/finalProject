@@ -9,5 +9,4 @@ public interface WifiScanListener {
 
     void onWifiScanFinished(List<ApInfo> scanResults); // called when list of servers is available
 
-    void onFailure(ActionResult errorCode);
 }

@@ -18,9 +18,6 @@ import io.sharif.pavilion.network.Services.ServerService;
 
 public class Utility {
 
-    public static Context context =MainActivity.context;//TODO I should set context in first line of each Activity
-    private static Looper mainLooper = context.getMainLooper();
-    private static WifiManager wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
     private static final String appFolderName = "HotSpot";
     private static final int TCP_SEGMENT_SIZE = 8192;
 
@@ -36,32 +33,42 @@ public class Utility {
      * Enable wifi.
      * @return {@code SUCCESS} if operation succeeds, {@code FAILURE} otherwise
      */
-    public static synchronized ActionResult enableWifi() {
-        if (wifiManager != null) {
-            wifiManager.setWifiEnabled(true);
-            return ActionResult.SUCCESS;
-        } else
-            return ActionResult.FAILURE;
+    public static ActionResult enableWifi(Context context) {
+        if (context != null) {
+            WifiManager wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+            if (wifiManager != null) {
+                wifiManager.setWifiEnabled(true);
+                return ActionResult.SUCCESS;
+            }
+        }
+        return ActionResult.FAILURE;
     }
 
     /**
      * Disable wifi.
      * @return {@code SUCCESS} if operation succeeds, {@code FAILURE} otherwise
      */
-    public static synchronized ActionResult disableWifi() {
-        if (wifiManager != null) {
-            wifiManager.setWifiEnabled(false);
-            return ActionResult.SUCCESS;
-        } else
-            return ActionResult.FAILURE;
+    public static ActionResult disableWifi(Context context) {
+        if (context != null) {
+            WifiManager wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+            if (wifiManager != null) {
+                wifiManager.setWifiEnabled(false);
+                return ActionResult.SUCCESS;
+            }
+        }
+        return ActionResult.FAILURE;
     }
 
     /**
      * Check whether or not wifi is enabled.
      * @return {@code true} if WiFiManager is not null and wifi is enabled, {@code false} otherwise
      */
-    public static boolean isWifiEnabled() {
-        return wifiManager != null && wifiManager.isWifiEnabled();
+    public static boolean isWifiEnabled(Context context) {
+        if (context != null) {
+            WifiManager wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+            return wifiManager != null && wifiManager.isWifiEnabled();
+        }
+        return false;
     }
 
     public static String md5(String message) {
@@ -103,7 +110,7 @@ public class Utility {
         return null;
     }
 
-    public static long getMessageTotalLength(Message message) {
+    public static long getMessageTotalLength(Context context, Message message) {
 
         long totalLength = 0;
 
@@ -146,8 +153,8 @@ public class Utility {
      * This method is used to run server listeners on UI thread.
      * @param runnable runnable to be run on UI thread
      */
-    public static void postOnMainThread(Runnable runnable) {
-        Handler handler = new Handler(mainLooper);
+    public static void postOnMainThread(Context context, Runnable runnable) {
+        Handler handler = new Handler(context.getMainLooper());
         handler.post(runnable);
     }
 
