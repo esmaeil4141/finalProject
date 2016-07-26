@@ -525,7 +525,7 @@ public class ServerService extends BroadcastReceiver {
          * @param list recently detected list of clients
          * @return {@code FAILURE} if new list is null, {@code SUCCESS} otherwise
          */
-        private synchronized ActionResult handleScanResult(List<ClientDevice> list) {
+        private ActionResult handleScanResult(List<ClientDevice> list) {
 
             if (list == null) return ActionResult.FAILURE;
 
@@ -586,7 +586,7 @@ public class ServerService extends BroadcastReceiver {
          * @param device ClientDevice object to search or add
          * @return ClientDevice object on search command, null on add command
          */
-        private synchronized ClientDevice listAction(String command, ClientDevice device) {
+        private ClientDevice listAction(String command, ClientDevice device) {
 
             if (device != null) {
                 if (command.equals(searchCommand)) { // search by device id
