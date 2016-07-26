@@ -18,7 +18,6 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.sharif.pavilion.network.DataStructures.ApInfo;
 import io.sharif.pavilion.network.DataStructures.Message;
@@ -129,7 +128,7 @@ public class ClientService extends BroadcastReceiver {
                     case 1: if (wifiListener != null) wifiListener.onWifiDisabled(); break;
                     case 2: break; // WiFi enabling
                     case 3: if (wifiListener != null) wifiListener.onWifiEnabled(); break;
-                    case 4: break; // Unknown wifi state
+                    case 4: if (wifiListener != null) wifiListener.onFailure(ActionResult.UNKNOWN); break;
                 }
 
             } else if (WifiManager.SCAN_RESULTS_AVAILABLE_ACTION.equals(action)) {
@@ -174,66 +173,67 @@ public class ClientService extends BroadcastReceiver {
 
     public ActionResult createServerConnection() {
 
-        if (serverIP != null) {
-            Runnable runnable = new Runnable() {
-                @Override
-                public void run() {
+        if (serverIP == null) return ActionResult.FAILURE;
 
-                    try {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    serverSocket = new Socket(serverIP, ServerService.SERVER_PORT);
+                    serverDataInputStream = new DataInputStream(serverSocket.getInputStream());
+                    serverDataOutputStream = new DataOutputStream(serverSocket.getOutputStream());
 
-                        serverSocket = new Socket(serverIP, ServerService.SERVER_PORT);
-                        serverDataInputStream = new DataInputStream(serverSocket.getInputStream());
-                        serverDataOutputStream = new DataOutputStream(serverSocket.getOutputStream());
+                    new InputStreamHandler(
+                            serverDataInputStream,
+                            receiveMessageListener,
+                            clientListener,
+                            connectedSSID
+                    ).start();
 
-                        new InputStreamHandler(
-                                serverDataInputStream,
-                                receiveMessageListener,
-                                clientListener,
-                                connectedSSID
-                        ).start();
+                    if (clientListener != null)
+                        Utility.postOnMainThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                clientListener.onConnected();
+                            }
+                        });
 
-                        if (clientListener != null)
-                            Utility.postOnMainThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    clientListener.onConnected();
-                                }
-                            });
-
-                    } catch (IOException | NullPointerException e) {
-                        e.printStackTrace();
-                        if (clientListener != null)
-                            Utility.postOnMainThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    clientListener.onDisconnected();
-                                }
-                            });
-                    }
+                } catch (IOException | NullPointerException e) {
+                    e.printStackTrace();
+                    if (clientListener != null)
+                        Utility.postOnMainThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                clientListener.onDisconnected();
+                            }
+                        });
                 }
-            };
+            }
+        }).start();
 
-            new Thread(runnable).start();
-            return ActionResult.SUCCESS;
-        }
-
-        return ActionResult.FAILURE;
+        return ActionResult.SUCCESS;
     }
 
     public ActionResult closeServerConnection() {
+
         try {
             if (serverDataInputStream != null) serverDataInputStream.close();
         } catch (IOException | NullPointerException e) {
             e.printStackTrace();
-        } finally {
-            try {
-                if (serverDataOutputStream != null) serverDataOutputStream.close();
-                if (serverSocket != null) serverSocket.close();
-            } catch (IOException | NullPointerException e) {
-                e.printStackTrace();
-                return ActionResult.FAILURE;
-            }
         }
+
+        try {
+            if (serverDataOutputStream != null) serverDataOutputStream.close();
+        } catch (IOException | NullPointerException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            if (serverSocket != null) serverSocket.close();
+        } catch (IOException | NullPointerException e) {
+            e.printStackTrace();
+        }
+
         return ActionResult.SUCCESS;
     }
 

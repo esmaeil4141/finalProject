@@ -7,10 +7,10 @@ import java.net.Socket;
 
 public class ClientDevice {
 
-    private OutputStream outputStream;
-    private InputStream inputStream;
     private volatile String ipAddr, hWAddr;
     private volatile boolean isReachable;
+    private OutputStream outputStream;
+    private InputStream inputStream;
     private Socket socket;
 
     private final Object outputStreamLock;
