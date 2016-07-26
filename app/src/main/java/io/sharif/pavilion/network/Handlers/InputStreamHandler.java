@@ -6,6 +6,7 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicLong;
 
 import io.sharif.pavilion.network.DataStructures.ClientDevice;
 import io.sharif.pavilion.network.DataStructures.Message;
@@ -24,7 +25,8 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
         CLIENT
     }
 
-    private long totalLength, readBytes, fileReadBytes;
+    private AtomicLong totalLength, readBytes;
+    private long fileReadBytes;
     private boolean folderIsPresent = true;
     private String baseAddress, fileName, fileExtension, connectedSSID, suffix;
     private ClientDevice clientDevice;
@@ -66,12 +68,12 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
 
     @Override
     public long getTotalBytes() {
-        return totalLength;
+        return totalLength.get();
     }
 
     @Override
     public long getSentBytes() {
-        return readBytes;
+        return readBytes.get();
     }
 
     @Override
@@ -84,6 +86,8 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
 
         try {
 
+            totalLength = new AtomicLong();
+            readBytes = new AtomicLong();
             progressMonitor = new ProgressMonitor(this, receiveMessageListener);
 
             int temp_int;
@@ -93,7 +97,9 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
 
                 temp_int = dataInputStream.readInt();
 
-                readBytes = totalLength = fileReadBytes = 0;
+                readBytes.set(0);
+                totalLength.set(0);
+                fileReadBytes = 0;
 
                 if (receiveMessageListener != null) {
                     Utility.postOnMainThread(new Runnable() {
@@ -106,18 +112,22 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
 
                 final Message message = new Message(temp_int);
 
-                totalLength = dataInputStream.readLong();
+                totalLength.set(dataInputStream.readLong());
 
                 progressMonitor.enableUpdate();
 
                 message.setMessage(dataInputStream.readUTF());
 
-                readBytes += message.getMessage().getBytes("UTF-8").length;
+                readBytes.addAndGet(message.getMessage().getBytes("UTF-8").length);
 
-                if (readBytes < totalLength) { // it means that we have at least one file in message
+                // no race in if expression, as the other thread is not going readBytes or totalLenght values
+                if (readBytes.get() < totalLength.get()) {
 
-                    if (role == HandlerRole.CLIENT)
+                    // it means that we have at least one file in message
+
+                    if (role == HandlerRole.CLIENT) {
                         if (suffix == null) suffix = Utility.getServerName(connectedSSID);
+                    }
                     else if (role == HandlerRole.SERVER)
                         if (suffix == null) suffix = String.valueOf(Utility.ipToLong(clientDevice.getIpAddr()));
 
@@ -129,7 +139,7 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
 
                     if (folderIsPresent) {
 
-                        while (readBytes < totalLength) {
+                        while (readBytes.get() < totalLength.get()) { // again no race condition here
 
                             fileReadBytes = 0;
 
@@ -142,7 +152,7 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
                     }
                 }
 
-                if (role == HandlerRole.CLIENT)
+                if (role == HandlerRole.CLIENT) {
                     if (clientListener != null)
                         Utility.postOnMainThread(new Runnable() {
                             @Override
@@ -150,6 +160,7 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
                                 clientListener.onMessageReceived(message);
                             }
                         });
+                }
                 else if (role == HandlerRole.SERVER)
                     if (serverListener != null)
                         Utility.postOnMainThread(new Runnable() {
@@ -231,7 +242,7 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
 
                 fileReadBytes += count;
 
-                readBytes += count;
+                readBytes.addAndGet(count);
 
                 fileOutputStream.write(buffer, 0, count);
 
