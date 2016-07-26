@@ -8,6 +8,8 @@ public interface ClientListener {
 
     void onConnected(); // called when client is connected to server socket
 
+    void onConnectionFailure();
+
     void onDisconnected(); // called when client socket is closed
 
     void onLeftGroup(); // called when client has left server's WiFi network

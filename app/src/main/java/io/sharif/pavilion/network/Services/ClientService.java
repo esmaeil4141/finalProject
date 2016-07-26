@@ -42,7 +42,7 @@ public class ClientService extends BroadcastReceiver {
 
     private DataOutputStream serverDataOutputStream;
     private DataInputStream serverDataInputStream;
-    public String connectedSSID, serverIP;
+    private String connectedSSID, serverIP;
     private Socket serverSocket;
 
     private State networkCurrentState;
@@ -81,83 +81,6 @@ public class ClientService extends BroadcastReceiver {
             context.unregisterReceiver(this);
         }
         return ActionResult.SUCCESS;
-    }
-
-    @Override
-    public void onReceive(Context context, Intent intent) {
-
-        if (wifiManager != null) {
-
-            String action = intent.getAction();
-
-            if (WifiManager.NETWORK_STATE_CHANGED_ACTION.equals(action)) {
-
-                NetworkInfo networkInfo = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
-
-                if (networkInfo != null) {
-
-                    State state = networkInfo.getState();
-
-                    if (networkCurrentState == state) {
-                        // ignore multiple identical events
-                    } else {
-                        networkCurrentState = state;
-                        if (state == State.CONNECTED) {
-                            connectedSSID = getWifiName();
-                            if (connectedSSID != null && connectedSSID.startsWith(ServerService.SSID_PREFIX)) {
-                                serverIP = obtainServerIP();
-                                if (clientListener != null)
-                                    clientListener.onJoinedGroup();
-                            }
-                        } else if (state == State.DISCONNECTED) {
-                            if (connectedSSID != null && connectedSSID.startsWith(ServerService.SSID_PREFIX)) {
-                                connectedSSID = null;
-                                serverIP = null;
-                                if (clientListener != null)
-                                    clientListener.onLeftGroup();
-                            }
-                        }
-                    }
-                }
-
-            } else if (WifiManager.WIFI_STATE_CHANGED_ACTION.equals(action)) {
-
-                int wifiState = intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE, -1);
-                switch (wifiState) {
-                    case 0: break; // WiFi disabling
-                    case 1: if (wifiListener != null) wifiListener.onWifiDisabled(); break;
-                    case 2: break; // WiFi enabling
-                    case 3: if (wifiListener != null) wifiListener.onWifiEnabled(); break;
-                    case 4: if (wifiListener != null) wifiListener.onFailure(ActionResult.UNKNOWN); break;
-                }
-
-            } else if (WifiManager.SCAN_RESULTS_AVAILABLE_ACTION.equals(action)) {
-
-                if (wifiScanListener != null && scanRequested) {
-                    scanRequested = false;
-                    List<ScanResult> scanResults = wifiManager.getScanResults();
-                    List<ApInfo> serversList = new ArrayList<>();
-
-                    String ssid, name;
-
-                    for (ScanResult result : scanResults) {
-                        ssid = result.SSID;
-                        if (ssid.startsWith(ServerService.SSID_PREFIX)) {
-                            name = Utility.getServerName(ssid);
-                            ApInfo apInfo = new ApInfo(
-                                    name,
-                                    Utility.generatePassword(result.SSID),
-                                    result.BSSID,
-                                    result.SSID);
-                            serversList.add(apInfo);
-                        }
-                    }
-
-                    wifiScanListener.onWifiScanFinished(serversList);
-
-                }
-            }
-        }
     }
 
     @SuppressWarnings("deprecation")
@@ -204,7 +127,7 @@ public class ClientService extends BroadcastReceiver {
                         Utility.postOnMainThread(new Runnable() {
                             @Override
                             public void run() {
-                                clientListener.onDisconnected();
+                                clientListener.onConnectionFailure();
                             }
                         });
                 }
@@ -233,6 +156,10 @@ public class ClientService extends BroadcastReceiver {
         } catch (IOException | NullPointerException e) {
             e.printStackTrace();
         }
+
+        serverDataInputStream = null;
+        serverDataOutputStream = null;
+        serverSocket = null;
 
         return ActionResult.SUCCESS;
     }
@@ -286,12 +213,14 @@ public class ClientService extends BroadcastReceiver {
     }
 
     // disconnect from currently connected server
-    public synchronized ActionResult leave() {
+    public ActionResult leave() {
         return wifiManager != null && networkID != -1 && wifiManager.removeNetwork(networkID)
                 && wifiManager.saveConfiguration() ? ActionResult.SUCCESS : ActionResult.FAILURE;
     }
 
     public ActionResult sendMessage(Message message, SendMessageListener sendMessageListener) {
+
+        if (message == null || serverDataOutputStream == null) return ActionResult.FAILURE;
 
         new MessageSender(
                 context,
@@ -301,5 +230,81 @@ public class ClientService extends BroadcastReceiver {
         ).start();
 
         return ActionResult.SUCCESS;
+    }
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+
+        if (wifiManager == null) return;
+
+        String action = intent.getAction();
+
+        if (WifiManager.NETWORK_STATE_CHANGED_ACTION.equals(action)) {
+
+            NetworkInfo networkInfo = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
+
+            if (networkInfo != null) {
+
+                State state = networkInfo.getState();
+
+                if (networkCurrentState == state) {
+                    // ignore multiple identical events
+                } else {
+                    networkCurrentState = state;
+                    if (state == State.CONNECTED) {
+                        connectedSSID = getWifiName();
+                        if (connectedSSID != null && connectedSSID.startsWith(ServerService.SSID_PREFIX)) {
+                            serverIP = obtainServerIP();
+                            if (clientListener != null)
+                                clientListener.onJoinedGroup();
+                        }
+                    } else if (state == State.DISCONNECTED) {
+                        if (connectedSSID != null && connectedSSID.startsWith(ServerService.SSID_PREFIX)) {
+                            connectedSSID = null;
+                            serverIP = null;
+                            if (clientListener != null)
+                                clientListener.onLeftGroup();
+                        }
+                    }
+                }
+            }
+
+        } else if (WifiManager.WIFI_STATE_CHANGED_ACTION.equals(action)) {
+
+            int wifiState = intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE, -1);
+            switch (wifiState) {
+                case 0: break; // WiFi disabling
+                case 1: if (wifiListener != null) wifiListener.onWifiDisabled(); break;
+                case 2: break; // WiFi enabling
+                case 3: if (wifiListener != null) wifiListener.onWifiEnabled(); break;
+                case 4: if (wifiListener != null) wifiListener.onFailure(ActionResult.UNKNOWN); break;
+            }
+
+        } else if (WifiManager.SCAN_RESULTS_AVAILABLE_ACTION.equals(action)) {
+
+            if (wifiScanListener != null && scanRequested) {
+                scanRequested = false;
+                List<ScanResult> scanResults = wifiManager.getScanResults();
+                List<ApInfo> serversList = new ArrayList<>();
+
+                String ssid, name;
+
+                for (ScanResult result : scanResults) {
+                    ssid = result.SSID;
+                    if (ssid.startsWith(ServerService.SSID_PREFIX)) {
+                        name = Utility.getServerName(ssid);
+                        ApInfo apInfo = new ApInfo(
+                                name,
+                                Utility.generatePassword(result.SSID),
+                                result.BSSID,
+                                result.SSID);
+                        serversList.add(apInfo);
+                    }
+                }
+
+                wifiScanListener.onWifiScanFinished(serversList);
+
+            }
+        }
     }
 }

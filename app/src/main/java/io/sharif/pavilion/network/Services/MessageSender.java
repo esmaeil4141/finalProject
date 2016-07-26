@@ -49,73 +49,66 @@ public class MessageSender extends Thread implements ProgressMonitor.GetMonitorD
     @Override
     public void run() {
 
-        if (message != null && context != null && dataOutputStream != null) {
+        totalLength = Utility.getMessageTotalLength(message);
 
-            totalLength = Utility.getMessageTotalLength(message);
+        if (totalLength > 0) {
 
-            if (totalLength > 0) {
+            try {
 
-                try {
+                String address;
 
-                    String address;
+                bytesSent = 0;
 
-                    bytesSent = 0;
+                progressMonitor = new ProgressMonitor(this, sendMessageListener);
+                progressMonitor.enableUpdate();
 
-                    progressMonitor = new ProgressMonitor(this, sendMessageListener);
-                    progressMonitor.enableUpdate();
+                dataOutputStream.writeInt(message.getID());
+                dataOutputStream.writeLong(totalLength);
 
-                    dataOutputStream.writeInt(message.getID());
-                    dataOutputStream.writeLong(totalLength);
+                if (message.getMessage() == null) message.setMessage("");
 
-                    if (message.getMessage() == null) message.setMessage("");
+                String msg = message.getMessage();
 
-                    String msg = message.getMessage();
+                dataOutputStream.writeUTF(msg);
+                bytesSent += msg.getBytes("UTF-8").length;
 
-                    dataOutputStream.writeUTF(msg);
-                    bytesSent += msg.getBytes("UTF-8").length;
+                if (message.getFileUris() != null) {
 
-                    if (message.getFileUris() != null) {
+                    for (Uri uri : message.getFileUris()) {
 
-                        for (Uri uri : message.getFileUris()) {
+                        if (uri != null) {
 
-                            if (uri != null) {
-
-                                address = FileUtils.getPath(context, uri);
-                                if (address != null)
-                                    if ((file = new File(address)).exists())
-                                        sendFile();
-                            }
-
+                            address = FileUtils.getPath(context, uri);
+                            if (address != null)
+                                if ((file = new File(address)).exists())
+                                    sendFile();
                         }
 
                     }
 
-                    if (sendMessageListener != null)
-                        Utility.postOnMainThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                sendMessageListener.onMessageSent(message.getID());
-                            }
-                        });
-
-                    progressMonitor.disableUpdate();
-                    return;
-
-                } catch (IOException | NullPointerException e) {
-                    e.printStackTrace();
                 }
+
+                if (sendMessageListener != null)
+                    Utility.postOnMainThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            sendMessageListener.onMessageSent(message.getID());
+                        }
+                    });
+
+            } catch (IOException | NullPointerException e) {
+                e.printStackTrace();
+                if (sendMessageListener != null)
+                    Utility.postOnMainThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            sendMessageListener.onFailure(ActionResult.FAILURE);
+                        }
+                    });
             }
         }
 
         progressMonitor.disableUpdate();
-
-        if (sendMessageListener != null)
-            Utility.postOnMainThread(new Runnable() {
-                @Override
-                public void run() {
-                    sendMessageListener.onFailure(ActionResult.FAILURE);
-                }
-            });
     }
 
     private boolean sendFile() throws IOException {

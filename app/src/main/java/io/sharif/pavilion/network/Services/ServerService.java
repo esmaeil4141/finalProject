@@ -214,34 +214,30 @@ public class ServerService extends BroadcastReceiver {
                                     final SendMessageListener sendMessageListener) {
 
 
-        ClientDevice clientDevice = getClient(clientID);
-        if (clientDevice != null) {
+        if (message != null) {
 
-            OutputStream outputStream = clientDevice.getOutputStream();
-            if (outputStream != null) {
+            ClientDevice clientDevice = getClient(clientID);
+            if (clientDevice != null) {
 
-                DataOutputStream clientDataOutputStream = new DataOutputStream(outputStream);
+                OutputStream outputStream = clientDevice.getOutputStream();
+                if (outputStream != null) {
 
-                new MessageSender(
-                        context,
-                        message,
-                        clientDataOutputStream,
-                        sendMessageListener
-                ).start();
+                    DataOutputStream clientDataOutputStream = new DataOutputStream(outputStream);
 
-                return ActionResult.SUCCESS;
+                    new MessageSender(
+                            context,
+                            message,
+                            clientDataOutputStream,
+                            sendMessageListener
+                    ).start();
+
+                    return ActionResult.SUCCESS;
+                }
             }
+
         }
 
-        if (sendMessageListener != null)
-            Utility.postOnMainThread(new Runnable() {
-                @Override
-                public void run() {
-                    sendMessageListener.onFailure(ActionResult.FAILURE);
-                }
-            });
-
-        return ActionResult.SUCCESS;
+        return ActionResult.FAILURE;
     }
 
     /**
