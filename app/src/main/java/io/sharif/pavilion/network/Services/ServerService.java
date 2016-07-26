@@ -54,7 +54,7 @@ public class ServerService extends BroadcastReceiver {
 
     private String name;
 
-    private boolean wifiConfigChanged, createSocket, isWifiApEnabled, receiverRegistered;
+    private boolean wifiConfigChanged, isWifiApEnabled, receiverRegistered, callServerStart;
 
     private final ReceiveMessageListener receiveMessageListener;
     private final List<ClientDevice> clientsList;
@@ -89,7 +89,7 @@ public class ServerService extends BroadcastReceiver {
      * to create server socket when hotspot is enabled.
      * @return {@code SUCCESS} if config is valid and operation succeeds, {@code FAILURE} otherwise
      */
-    public synchronized ActionResult start() {
+    public ActionResult start() {
         if (isConfigValid() && !isWifiApEnabled) {
 
             if (!receiverRegistered) {
@@ -100,16 +100,13 @@ public class ServerService extends BroadcastReceiver {
             clientScanner = new ClientScanner();
             clientScanner.start();
 
+            callServerStart = true;
+
             if (wifiConfigChanged) {
-
-                WifiConfiguration wifiConfiguration = getNewConfig();
-
                 wifiConfigChanged = false;
-                createSocket = true;
+                WifiConfiguration wifiConfiguration = getNewConfig();
                 return enableWifiAp(wifiConfiguration, true) ? ActionResult.SUCCESS : ActionResult.FAILURE;
-
             } else {
-                createSocket = true;
                 return enableWifiAp(null, true) ? ActionResult.SUCCESS : ActionResult.FAILURE;
             }
 
@@ -121,7 +118,7 @@ public class ServerService extends BroadcastReceiver {
      * This method first closes server socket and then send a request to disable hotspot
      * @return {@code SUCCESS} if server socket and hotspot are successfully closed, {@code FAILURE} otherwise
      */
-    public synchronized ActionResult stop() {
+    public ActionResult stop() {
         if (receiverRegistered) {
             this.context.unregisterReceiver(this);
             receiverRegistered = false;
@@ -129,13 +126,8 @@ public class ServerService extends BroadcastReceiver {
 
         if (clientScanner != null) clientScanner.interrupt();
 
-        closeClients();
-
-        if (closeServerSocket() == ActionResult.SUCCESS) {
-            if (serverListener != null) serverListener.onServerStopped();
-            return enableWifiAp(null, false) ? ActionResult.SUCCESS : ActionResult.FAILURE;
-        } else
-            return ActionResult.FAILURE;
+        if (serverListener != null) serverListener.onServerStopped();
+        return enableWifiAp(null, false) ? ActionResult.SUCCESS : ActionResult.FAILURE;
     }
 
     /**
@@ -208,24 +200,12 @@ public class ServerService extends BroadcastReceiver {
      * @param name server name
      * @return {@code FAILURE} if name is null or empty, {@code SUCCESS} otherwise
      */
-    public synchronized ActionResult setApName(String name) {
+    public ActionResult setApName(String name) {
         if (name != null && !name.trim().equals("")) {
             this.name = name;
             this.wifiConfigChanged = true;
             return ActionResult.SUCCESS;
         } else
-            return ActionResult.FAILURE;
-    }
-
-    /**
-     * This method can be used to restart server service when server name or password is changed, or
-     * something has went wrong.
-     * @return {@code SUCCESS} if service successfully stopped and started again, {@code FAILURE} otherwise
-     */
-    public synchronized ActionResult restart() {
-        if (isWifiApEnabled)
-            return stop() == ActionResult.SUCCESS ? start() : ActionResult.FAILURE;
-        else
             return ActionResult.FAILURE;
     }
 
@@ -325,9 +305,10 @@ public class ServerService extends BroadcastReceiver {
             clientDevice.closetSocket();
     }
 
-    private ActionResult closeServerSocket() {
+    public ActionResult closeServerSocket() {
 
         if (serverSocket != null) {
+            closeClients();
             try {
                 serverSocket.close();
             } catch (IOException | NullPointerException e) {
@@ -352,7 +333,7 @@ public class ServerService extends BroadcastReceiver {
         return null;
     }
 
-    private ActionResult openServerSocket() {
+    public ActionResult createServerSocket() {
 
         Runnable runnable = new Runnable() {
             @Override
@@ -364,6 +345,14 @@ public class ServerService extends BroadcastReceiver {
                     InetAddress inetAddress;
 
                     serverSocket = new ServerSocket(SERVER_PORT);
+
+                    if (serverListener != null)
+                        Utility.postOnMainThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                serverListener.onSocketCreated();
+                            }
+                        });
 
                     while (!Thread.currentThread().isInterrupted()) {
 
@@ -395,6 +384,13 @@ public class ServerService extends BroadcastReceiver {
 
                 } catch (IOException | NullPointerException e) {
                     e.printStackTrace();
+                    if (serverListener != null)
+                        Utility.postOnMainThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                serverListener.onSocketClosed();
+                            }
+                        });
                 }
 
             }
@@ -421,12 +417,12 @@ public class ServerService extends BroadcastReceiver {
                 state = state >= 10 ? state - 10 : state;
 
                 if (WifiManager.WIFI_STATE_ENABLED == state) {
-                    if (serverListener != null)
+                    if (serverListener != null) {
                         serverListener.onApEnabled();
-                    if (createSocket) {
-                        createSocket = false;
-                        if (openServerSocket() == ActionResult.SUCCESS && serverListener != null)
+                        if (callServerStart) {
+                            callServerStart = false;
                             serverListener.onServerStarted();
+                        }
                     }
                 } else if (WifiManager.WIFI_STATE_DISABLED == state)
                     if (serverListener != null)

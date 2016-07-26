@@ -31,6 +31,9 @@ public interface ServerListener {
      */
     void onServerStarted();
 
+    void onSocketCreated();
+
+    void onSocketClosed();
     /**
      * This method is called when server socket is closed.
      */

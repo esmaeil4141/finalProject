@@ -109,7 +109,6 @@ public class ClientService extends BroadcastReceiver {
                                 serverIP = obtainServerIP();
                                 if (clientListener != null)
                                     clientListener.onJoinedGroup();
-                                createServerConnection();
                             }
                         } else if (state == State.DISCONNECTED) {
                             if (connectedSSID != null && connectedSSID.startsWith(ServerService.SSID_PREFIX)) {
@@ -203,9 +202,17 @@ public class ClientService extends BroadcastReceiver {
 
                     } catch (IOException | NullPointerException e) {
                         e.printStackTrace();
+                        if (clientListener != null)
+                            Utility.postOnMainThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    clientListener.onDisconnected();
+                                }
+                            });
                     }
                 }
             };
+
             new Thread(runnable).start();
             return ActionResult.SUCCESS;
         }
@@ -214,13 +221,6 @@ public class ClientService extends BroadcastReceiver {
     }
 
     public ActionResult closeServerConnection() {
-        if (clientListener != null)
-            Utility.postOnMainThread(new Runnable() {
-                @Override
-                public void run() {
-                    clientListener.onDisconnected();
-                }
-            });
         try {
             if (serverDataInputStream != null) serverDataInputStream.close();
         } catch (IOException | NullPointerException e) {
