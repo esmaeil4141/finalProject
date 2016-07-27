@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+
 import io.sharif.pavilion.network.DataStructures.ApInfo;
 import io.sharif.pavilion.network.DataStructures.Message;
 import io.sharif.pavilion.network.Handlers.InputStreamHandler;
@@ -27,10 +28,12 @@ import io.sharif.pavilion.network.Listeners.ReceiveMessageListener;
 import io.sharif.pavilion.network.Listeners.SendMessageListener;
 import io.sharif.pavilion.network.Listeners.WifiListener;
 import io.sharif.pavilion.network.Listeners.WifiScanListener;
-import io.sharif.pavilion.network.StateControllers.ClientStateController;
 import io.sharif.pavilion.network.Utilities.ActionResult;
 import io.sharif.pavilion.network.Utilities.Utility;
 
+/**
+ * This class is used to provide services for clients.
+ */
 public class ClientService extends BroadcastReceiver {
 
     private final ReceiveMessageListener receiveMessageListener;
@@ -43,16 +46,17 @@ public class ClientService extends BroadcastReceiver {
 
     private DataOutputStream serverDataOutputStream;
     private DataInputStream serverDataInputStream;
-    public String connectedSSID, serverIP;
     private Socket serverSocket;
 
+    /**
+     * connectedSSID and serverIP are accessed in multiple threads simultaneously thus they are
+     * declared as volatile to ensure all reads see the earlier write.(Memory Visibility)
+     */
+    private volatile String connectedSSID, serverIP;
+
+    private boolean receiverRegistered, scanRequested;
     private State networkCurrentState;
-
-    private boolean receiverRegistered;
-    private boolean scanRequested;
-    private int networkID = -1;
-
-    private ClientStateController clientStateController;
+    private int networkID = -1; // currently connected wifi network ID
 
     public ClientService(Context context,
                          WifiScanListener wifiScanListener,
@@ -71,105 +75,36 @@ public class ClientService extends BroadcastReceiver {
         this.wifiIntentFilter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
     }
 
+    /**
+     * This method is used to registers receivers for client service.
+     * @return {@code SUCCESS} if operation succeeds, {@code FAILURE} otherwise
+     */
     public ActionResult start() {
         if (!receiverRegistered) {
-            context.registerReceiver(this, wifiIntentFilter);
             receiverRegistered = true;
+            context.registerReceiver(this, wifiIntentFilter);
+            return ActionResult.SUCCESS;
         }
-        return ActionResult.SUCCESS;
+        return ActionResult.FAILURE;
     }
 
+    /**
+     * This method is used to unregister receivers for client service.
+     * @return {@code SUCCESS} if operation succeeds, {@code FAILURE} otherwise
+     */
     public ActionResult stop() {
         if (receiverRegistered) {
             receiverRegistered = false;
             context.unregisterReceiver(this);
+            return ActionResult.SUCCESS;
         }
-        disconnect();
-        return ActionResult.SUCCESS;
+        return ActionResult.FAILURE;
     }
 
-    @Override
-    public void onReceive(Context context, Intent intent) {
-
-        if (wifiManager != null) {
-
-            String action = intent.getAction();
-
-            if (WifiManager.NETWORK_STATE_CHANGED_ACTION.equals(action)) {
-
-                NetworkInfo networkInfo = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
-
-                if (networkInfo != null) {
-
-                    State state = networkInfo.getState();
-
-                    if (networkCurrentState == state) {
-                        // ignore multiple identical events
-                    } else {
-                        networkCurrentState = state;
-                        if (state == State.CONNECTED) {
-                            connectedSSID = getWifiName();
-                            if (connectedSSID != null && connectedSSID.startsWith(ServerService.SSID_PREFIX)) {
-                                serverIP = obtainServerIP();
-                                if (clientListener != null)
-                                    clientListener.onJoinedGroup();
-                                createServerConnection();
-                            }
-                        } else if (state == State.DISCONNECTED) {
-                            if (connectedSSID != null && connectedSSID.startsWith(ServerService.SSID_PREFIX)) {
-                                connectedSSID = null;
-                                serverIP = null;
-                                if (clientListener != null)
-                                    clientListener.onLeftGroup();
-                            }
-                        }
-                    }
-                }
-
-            } else if (WifiManager.WIFI_STATE_CHANGED_ACTION.equals(action)) {
-
-                int wifiState = intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE, -1);
-                switch (wifiState) {
-                    case 0: break; // WiFi disabling
-                    case 1: if (wifiListener != null) wifiListener.onWifiDisabled(); break;
-                    case 2: break; // WiFi enabling
-                    case 3: if (wifiListener != null) wifiListener.onWifiEnabled(); break;
-                    case 4: break; // Unknown wifi state
-                }
-
-            } else if (WifiManager.SCAN_RESULTS_AVAILABLE_ACTION.equals(action)) {
-
-                boolean temp = scanRequested;
-
-                scanRequested = false;
-
-                if (wifiScanListener != null && temp) {
-
-                    List<ScanResult> scanResults = wifiManager.getScanResults();
-                    List<ApInfo> serversList = new ArrayList<>();
-
-                    String ssid, name;
-
-                    for (ScanResult result : scanResults) {
-                        ssid = result.SSID;
-                        if (ssid.startsWith(ServerService.SSID_PREFIX)) {
-                            name = Utility.getServerName(ssid);
-                            ApInfo apInfo = new ApInfo(
-                                    name,
-                                    Utility.generatePassword(result.SSID),
-                                    result.BSSID,
-                                    result.SSID);
-                            serversList.add(apInfo);
-                        }
-                    }
-
-                    wifiScanListener.onWifiScanFinished(serversList);
-
-                }
-            }
-        }
-    }
-
+    /**
+     * This method is used to obtain gateway (server) IP address when connected to a wifi network.
+     * @return gateway (server) IP address
+     */
     @SuppressWarnings("deprecation")
     public String obtainServerIP() {
         String ip = null;
@@ -181,70 +116,91 @@ public class ClientService extends BroadcastReceiver {
         return ip;
     }
 
+    /**
+     * This method is used to connect to server socket.
+     * @return {@code SUCCESS} if server IP is not null, {@code FAILURE} otherwise
+     */
     public ActionResult createServerConnection() {
 
-        if (serverIP != null) {
-            Runnable runnable = new Runnable() {
-                @Override
-                public void run() {
+        if (serverIP == null) return ActionResult.FAILURE;
 
-                    try {
+        final ClientService that = this;
 
-                        serverSocket = new Socket(serverIP, ServerService.SERVER_PORT);
-                        serverDataInputStream = new DataInputStream(serverSocket.getInputStream());
-                        serverDataOutputStream = new DataOutputStream(serverSocket.getOutputStream());
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    serverSocket = new Socket(serverIP, ServerService.SERVER_PORT);
+                    serverDataInputStream = new DataInputStream(serverSocket.getInputStream());
+                    serverDataOutputStream = new DataOutputStream(serverSocket.getOutputStream());
 
-                        new InputStreamHandler(
-                                serverDataInputStream,
-                                receiveMessageListener,
-                                clientListener,
-                                connectedSSID
-                        ).start();
+                    // create a handler to handle server input stream
+                    new InputStreamHandler(
+                            context,
+                            serverDataInputStream,
+                            receiveMessageListener,
+                            clientListener,
+                            that,
+                            connectedSSID
+                    ).start();
 
-                        if (clientListener != null)
-                            Utility.postOnMainThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    clientListener.onConnected();
-                                }
-                            });
+                    if (clientListener != null)
+                        Utility.postOnMainThread(context, new Runnable() {
+                            @Override
+                            public void run() {
+                                clientListener.onConnected();
+                            }
+                        });
 
-                    } catch (IOException | NullPointerException e) {
-                        e.printStackTrace();
-                    }
+                } catch (IOException | NullPointerException e) {
+                    e.printStackTrace();
+                    if (clientListener != null)
+                        Utility.postOnMainThread(context, new Runnable() {
+                            @Override
+                            public void run() {
+                                clientListener.onConnectionFailure();
+                            }
+                        });
                 }
-            };
-            new Thread(runnable).start();
-            return ActionResult.SUCCESS;
-        }
+            }
+        }).start();
 
-        return ActionResult.FAILURE;
+        return ActionResult.SUCCESS;
     }
 
-    private ActionResult closeServerConnection() {
-        if (clientListener != null)
-            Utility.postOnMainThread(new Runnable() {
-                @Override
-                public void run() {
-                    clientListener.onDisconnected();
-                }
-            });
+    /**
+     * This method is used to close connection to server socket. It first closes input & output streams and
+     * the socket, and finally assigns null to all of them.
+     */
+    public void closeServerConnection() {
+
         try {
             if (serverDataInputStream != null) serverDataInputStream.close();
         } catch (IOException | NullPointerException e) {
             e.printStackTrace();
-        } finally {
-            try {
-                if (serverDataOutputStream != null) serverDataOutputStream.close();
-                if (serverSocket != null) serverSocket.close();
-            } catch (IOException | NullPointerException e) {
-                e.printStackTrace();
-                return ActionResult.FAILURE;
-            }
         }
-        return ActionResult.SUCCESS;
+
+        try {
+            if (serverDataOutputStream != null) serverDataOutputStream.close();
+        } catch (IOException | NullPointerException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            if (serverSocket != null) serverSocket.close();
+        } catch (IOException | NullPointerException e) {
+            e.printStackTrace();
+        }
+
+        serverDataInputStream = null;
+        serverDataOutputStream = null;
+        serverSocket = null;
     }
 
+    /**
+     * This method is used to obtain ssid of currently connected wifi network.
+     * @return connected wifi network ssid
+     */
     private String getWifiName() {
         if (wifiManager != null && wifiManager.isWifiEnabled()) {
             WifiInfo wifiInfo = wifiManager.getConnectionInfo();
@@ -261,46 +217,65 @@ public class ClientService extends BroadcastReceiver {
         return null;
     }
 
-    // scan for available servers, when servers list is available onWifiScanFinished listener is called
-    public synchronized ActionResult scan() {
-        if (wifiManager != null && !scanRequested) {
-            scanRequested = wifiManager.startScan();
-            return scanRequested ? ActionResult.SUCCESS : ActionResult.FAILURE;
-        } else
-            return ActionResult.FAILURE;
+    /**
+     * This method is used to register a request for wifi scan.
+     * @return {@code SUCCESS} if operation succeeds, {@code FAILURE} otherwise
+     */
+    public ActionResult scan() {
+        if (wifiManager == null || scanRequested) return ActionResult.FAILURE;
+        scanRequested = wifiManager.startScan();
+        return scanRequested ? ActionResult.SUCCESS : ActionResult.FAILURE;
     }
 
+    /**
+     * This method is used to check whether access point info is valid.
+     * @param apInfo apInfo to check
+     * @return {@code false} if ssid or password is null or empty, {@code true} otherwise
+     */
     private boolean isApInfoValid(ApInfo apInfo) {
         return apInfo != null
                 && apInfo.getSSID() != null && !apInfo.getSSID().trim().equals("")
                 && apInfo.getPassword() != null && !apInfo.getPassword().trim().equals("");
     }
 
-    // connect to a server
-    public synchronized ActionResult connect(ApInfo apInfo) {
-        if (wifiManager != null && isApInfoValid(apInfo)) {
+    /**
+     * This method is used to connect to a wifi network.
+     * @param apInfo server to connect to
+     * @return {@code FAILURE} if wifiManger is null or access point info is not valid, {@code SUCCESS} otherwise
+     */
+    public ActionResult join(ApInfo apInfo) {
 
-            WifiConfiguration wifiConfig = new WifiConfiguration();
-            wifiConfig.SSID = String.format("\"%s\"", apInfo.getSSID());
-            wifiConfig.preSharedKey = String.format("\"%s\"", apInfo.getPassword());
+        if (wifiManager == null || !isApInfoValid(apInfo)) return ActionResult.FAILURE;
 
-            networkID = wifiManager.addNetwork(wifiConfig);
+        WifiConfiguration wifiConfig = new WifiConfiguration();
+        wifiConfig.SSID = String.format("\"%s\"", apInfo.getSSID());
+        wifiConfig.preSharedKey = String.format("\"%s\"", apInfo.getPassword());
 
-            return wifiManager.disconnect()
-                    && wifiManager.enableNetwork(networkID, true)
-                    && wifiManager.reconnect() ? ActionResult.JOIN_SUCCESSFUL : ActionResult.JOIN_FAILED;
-        } else
-            return ActionResult.JOIN_FAILED;
+        networkID = wifiManager.addNetwork(wifiConfig);
+
+        return wifiManager.disconnect()
+                && wifiManager.enableNetwork(networkID, true)
+                && wifiManager.reconnect() ? ActionResult.SUCCESS : ActionResult.FAILURE;
     }
 
-    // disconnect from currently connected server
-    public synchronized ActionResult disconnect() {
-        return (closeServerConnection() == ActionResult.SUCCESS)
-                && wifiManager != null && networkID != -1 && wifiManager.removeNetwork(networkID)
+    /**
+     * This method is used to leave currently connected wifi network.
+     * @return {@code SUCCESS} if operation succeeds, {@code FAILURE} otherwise
+     */
+    public ActionResult leave() {
+        return wifiManager != null && networkID != -1 && wifiManager.removeNetwork(networkID)
                 && wifiManager.saveConfiguration() ? ActionResult.SUCCESS : ActionResult.FAILURE;
     }
 
+    /**
+     * This method is used to send message to server.
+     * @param message message to send to server
+     * @param sendMessageListener send message listener
+     * @return {@code FAILURE} if message is null or output stream is not initialized, {@code SUCCESS} otherwise
+     */
     public ActionResult sendMessage(Message message, SendMessageListener sendMessageListener) {
+
+        if (message == null || serverDataOutputStream == null) return ActionResult.FAILURE;
 
         new MessageSender(
                 context,
@@ -310,5 +285,85 @@ public class ClientService extends BroadcastReceiver {
         ).start();
 
         return ActionResult.SUCCESS;
+    }
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+
+        if (wifiManager == null) return;
+
+        String action = intent.getAction();
+
+        if (WifiManager.NETWORK_STATE_CHANGED_ACTION.equals(action)) {
+
+            NetworkInfo networkInfo = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
+
+            if (networkInfo != null) {
+
+                State state = networkInfo.getState();
+
+                if (networkCurrentState == state) {
+                    // ignore multiple identical events
+                } else {
+                    networkCurrentState = state;
+                    if (state == State.CONNECTED) {
+                        connectedSSID = getWifiName();
+                        if (connectedSSID != null && connectedSSID.startsWith(ServerService.SSID_PREFIX)) {
+                            // already connected to a server which is created with the same app
+                            serverIP = obtainServerIP();
+                            if (clientListener != null)
+                                clientListener.onJoinedGroup();
+                        }
+                    } else if (state == State.DISCONNECTED) {
+                        if (connectedSSID != null && connectedSSID.startsWith(ServerService.SSID_PREFIX)) {
+                            // already disconnected from a server which is created with the same app
+                            connectedSSID = null;
+                            serverIP = null;
+                            if (clientListener != null)
+                                clientListener.onLeftGroup();
+                        }
+                    }
+                }
+            }
+
+        } else if (WifiManager.WIFI_STATE_CHANGED_ACTION.equals(action)) {
+
+            int wifiState = intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE, -1);
+            switch (wifiState) {
+                case 0: break; // WiFi disabling
+                case 1: if (wifiListener != null) wifiListener.onWifiDisabled(); break;
+                case 2: break; // WiFi enabling
+                case 3: if (wifiListener != null) wifiListener.onWifiEnabled(); break;
+                case 4: if (wifiListener != null) wifiListener.onFailure(ActionResult.UNKNOWN); break;
+            }
+
+        } else if (WifiManager.SCAN_RESULTS_AVAILABLE_ACTION.equals(action)) {
+
+            // check whether user has registered scan request or scan result is from system automatic scan
+            if (wifiScanListener != null && scanRequested) {
+                scanRequested = false;
+                List<ScanResult> scanResults = wifiManager.getScanResults();
+                List<ApInfo> serversList = new ArrayList<>();
+
+                String ssid, name;
+
+                for (ScanResult result : scanResults) {
+                    ssid = result.SSID;
+                    // filter wifi networks which are created with the same app
+                    if (ssid.startsWith(ServerService.SSID_PREFIX)) {
+                        name = Utility.getServerName(ssid);
+                        ApInfo apInfo = new ApInfo(
+                                name,
+                                Utility.generatePassword(result.SSID),
+                                result.BSSID,
+                                result.SSID);
+                        serversList.add(apInfo);
+                    }
+                }
+
+                wifiScanListener.onWifiScanFinished(serversList);
+
+            }
+        }
     }
 }

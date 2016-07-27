@@ -2,16 +2,39 @@ package io.sharif.pavilion.network.Listeners;
 
 import io.sharif.pavilion.network.DataStructures.Message;
 
+/**
+ * Client service callbacks.
+ */
 public interface ClientListener {
 
-    void onJoinedGroup(); // called when client has joined server's WiFi network
+    /**
+     * This method is called when client joins server wifi network.
+     */
+    void onJoinedGroup();
 
-    void onConnected(); // called when client is connected to server socket
+    /**
+     * This method is called when client connects to server socket.
+     */
+    void onConnected();
 
-    void onDisconnected(); // called when client socket is closed
+    /**
+     * This method is called when client fails to connect to server socket.
+     */
+    void onConnectionFailure();
 
-    void onLeftGroup(); // called when client has left server's WiFi network
+    /**
+     * This method is called when client closes the connection to server socket.
+     */
+    void onDisconnected();
 
+    /**
+     * This method is called when client leaves server wifi network.
+     */
+    void onLeftGroup();
+
+    /**
+     * This method is called when client has received a new message from server.
+     * @param message received message
+     */
     void onMessageReceived(Message message);
-
 }

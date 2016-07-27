@@ -7,24 +7,39 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicLong;
+
 import io.sharif.pavilion.network.DataStructures.Message;
 import io.sharif.pavilion.network.Listeners.SendMessageListener;
 import io.sharif.pavilion.network.Utilities.ActionResult;
 import io.sharif.pavilion.network.Utilities.FileUtils;
 import io.sharif.pavilion.network.Utilities.Utility;
 
+/**
+ * This class is used to send messages.
+ */
 public class MessageSender extends Thread implements ProgressMonitor.GetMonitorData {
 
+    private final SendMessageListener sendMessageListener;
+    private final DataOutputStream dataOutputStream;
+    private ProgressMonitor progressMonitor; // progress monitor to calculate upload speed
     private final Message message;
     private final Context context;
-    private final DataOutputStream dataOutputStream;
-    private final SendMessageListener sendMessageListener;
-
-    private long totalLength, bytesSent;
-
     private File file;
-    private ProgressMonitor progressMonitor;
 
+    /**
+     * There are two threads reading and writing these members so they must be declared volatile
+     * to ensure that all reads see the earlier write.(Memory Visibility)
+     * Also operations on them must be atomic so the AtomicLong is used.
+     */
+    private volatile AtomicLong totalLength, bytesSent;
+
+    /**
+     * @param context application context
+     * @param message message to send
+     * @param dataOutputStream output stream to write message on
+     * @param sendMessageListener send message listener
+     */
     public MessageSender(
             Context context,
             Message message,
@@ -34,90 +49,99 @@ public class MessageSender extends Thread implements ProgressMonitor.GetMonitorD
         this.message = message;
         this.dataOutputStream = dataOutputStream;
         this.sendMessageListener = sendMessageListener;
+        this.totalLength = new AtomicLong();
+        this.bytesSent = new AtomicLong();
     }
 
+    /**
+     * This method provides total message length for ProgressMonitor object.
+     * @return total message length
+     */
     @Override
     public long getTotalBytes() {
-        return totalLength;
+        return totalLength.get();
     }
 
+    /**
+     * This method provides total read bytes for ProgressMonitor object.
+     * @return total read bytes by the time of calling
+     */
     @Override
     public long getSentBytes() {
-        return bytesSent;
+        return bytesSent.get();
     }
 
     @Override
     public void run() {
 
-        if (message != null && context != null && dataOutputStream != null) {
+        totalLength.set(Utility.getMessageTotalLength(context, message));
 
-            totalLength = Utility.getMessageTotalLength(message);
+        if (totalLength.get() > 0) { // no race condition here so no need to make the expression atomic
 
-            if (totalLength > 0) {
+            try {
 
-                try {
+                String address;
 
-                    String address;
+                bytesSent.set(0);
 
-                    bytesSent = 0;
+                progressMonitor = new ProgressMonitor(context, this, sendMessageListener);
+                progressMonitor.enableUpdate(); // start progress monitor to calculate upload speed
 
-                    progressMonitor = new ProgressMonitor(this, sendMessageListener);
-                    progressMonitor.enableUpdate();
+                dataOutputStream.writeInt(message.getID()); // first send message ID
+                dataOutputStream.writeLong(totalLength.get()); // next is message total length
 
-                    dataOutputStream.writeInt(message.getID());
-                    dataOutputStream.writeLong(totalLength);
+                if (message.getMessage() == null) message.setMessage("");
 
-                    if (message.getMessage() == null) message.setMessage("");
+                String msg = message.getMessage();
 
-                    String msg = message.getMessage();
+                dataOutputStream.writeUTF(msg); // next is text message
+                bytesSent.addAndGet(msg.getBytes("UTF-8").length); // increment sent bytes (atomic)
 
-                    dataOutputStream.writeUTF(msg);
-                    bytesSent += msg.getBytes("UTF-8").length;
+                // sending files if any
+                if (message.getFileUris() != null) {
 
-                    if (message.getFileUris() != null) {
+                    for (Uri uri : message.getFileUris()) {
 
-                        for (Uri uri : message.getFileUris()) {
+                        if (uri != null) {
 
-                            if (uri != null) {
-
-                                address = FileUtils.getPath(context, uri);
-                                if (address != null)
-                                    if ((file = new File(address)).exists())
-                                        sendFile();
-                            }
-
+                            address = FileUtils.getPath(context, uri); // get path from uri
+                            if (address != null)
+                                if ((file = new File(address)).exists())
+                                    sendFile();
                         }
 
                     }
 
-                    if (sendMessageListener != null)
-                        Utility.postOnMainThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                sendMessageListener.onMessageSent(message.getID());
-                            }
-                        });
-
-                    progressMonitor.disableUpdate();
-                    return;
-
-                } catch (IOException | NullPointerException e) {
-                    e.printStackTrace();
                 }
+
+                if (sendMessageListener != null)
+                    Utility.postOnMainThread(context, new Runnable() {
+                        @Override
+                        public void run() {
+                            sendMessageListener.onMessageSent(message.getID());
+                        }
+                    });
+
+            } catch (IOException | NullPointerException e) {
+                e.printStackTrace();
+                if (sendMessageListener != null)
+                    Utility.postOnMainThread(context, new Runnable() {
+                        @Override
+                        public void run() {
+                            sendMessageListener.onFailure(ActionResult.FAILURE);
+                        }
+                    });
+            } finally {
+                progressMonitor.disableUpdate();
             }
         }
-
-        progressMonitor.disableUpdate();
-
-        if (sendMessageListener != null)
-            Utility.postOnMainThread(new Runnable() {
-                @Override
-                public void run() {
-                    sendMessageListener.onFailure(ActionResult.FAILURE);
-                }
-            });
     }
 
+    /**
+     * This method is used to write a file on an output stream.
+     * @return {@code true} if operation succeeds, {@code false} otherwise
+     * @throws IOException when other peer closes the connection
+     */
     private boolean sendFile() throws IOException {
 
         if (file != null && dataOutputStream != null) {
@@ -144,7 +168,7 @@ public class MessageSender extends Thread implements ProgressMonitor.GetMonitorD
 
                         dataOutputStream.write(buffer, 0, len);
 
-                        bytesSent += len;
+                        bytesSent.addAndGet(len);
                     }
 
                     fileInputStream.close();

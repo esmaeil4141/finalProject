@@ -75,6 +75,7 @@ public class ConnectedServerFragment extends Fragment {
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         //Save the current selection for later recreation of this Fragment
+        if (currentServerObj != null)
         outState.putString("serverObj", currentServerObj.getJson());
 
 

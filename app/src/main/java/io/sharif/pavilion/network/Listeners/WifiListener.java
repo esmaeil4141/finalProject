@@ -2,6 +2,9 @@ package io.sharif.pavilion.network.Listeners;
 
 import io.sharif.pavilion.network.Utilities.ActionResult;
 
+/**
+ * WiFi state callbacks.
+ */
 public interface WifiListener {
 
     /**
@@ -16,8 +19,7 @@ public interface WifiListener {
 
     /**
      * This method is called when WiFi state is unknown.
-     * @param errorCode error code, representing reason of failure
+     * @param errorCode error code
      */
     void onFailure(ActionResult errorCode);
-
 }

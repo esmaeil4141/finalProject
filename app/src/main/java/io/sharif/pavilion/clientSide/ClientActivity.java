@@ -37,8 +37,6 @@ public class ClientActivity extends AppCompatActivity
 
         setContentView(R.layout.activity_client);
         context=this.getApplicationContext();
-        Utility.context=context;
-
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
