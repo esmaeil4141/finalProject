@@ -12,13 +12,13 @@ import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 
-import io.sharif.pavilion.clientSide.MainActivity;
+import io.sharif.pavilion.clientSide.ClientActivity;
 import io.sharif.pavilion.network.DataStructures.Message;
 import io.sharif.pavilion.network.Services.ServerService;
 
 public class Utility {
 
-    public static Context context =MainActivity.context;//TODO I should set context in first line of each Activity
+    public static Context context = ClientActivity.context;//TODO I should set context in first line of each Activity
     private static Looper mainLooper = context.getMainLooper();
     private static WifiManager wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
     private static final String appFolderName = "HotSpot";

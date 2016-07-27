@@ -11,10 +11,9 @@ import io.sharif.pavilion.model.contents.UriSerializer;
 import io.sharif.pavilion.network.DataStructures.ApInfo;
 import io.sharif.pavilion.utility.Statics;
 
-/**
- * Created by EsiJOOn on 2016/07/19.
- */
-public class ServerObj {
+
+
+public class ServerObj {//this object have all info of one server in clientSide
     String serverId,serverName,description;//description not used
     int iconId;
     ContentsObj contentsObj;

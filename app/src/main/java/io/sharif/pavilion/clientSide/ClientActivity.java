@@ -27,15 +27,15 @@ import io.sharif.pavilion.model.ServerObj;
 import io.sharif.pavilion.network.Utilities.Utility;
 import io.sharif.pavilion.serverSide.ServerActivity;
 
-public class MainActivity extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener, HeadlinesFragment.OnHeadlineSelectedListener{
+public class ClientActivity extends AppCompatActivity
+        implements NavigationView.OnNavigationItemSelectedListener, ServersListFragment.OnHeadlineSelectedListener{
     public  static Context context;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_client);
         context=this.getApplicationContext();
         Utility.context=context;
 
@@ -49,7 +49,7 @@ public class MainActivity extends AppCompatActivity
             public void onClick(View view) {
                 Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
-//                Intent myIntent = new Intent(MainActivity.this,ServerActivity.class);
+//                Intent myIntent = new Intent(ClientActivity.this,ServerActivity.class);
 //                startActivity(myIntent);
             }
         });
@@ -79,18 +79,18 @@ public class MainActivity extends AppCompatActivity
             }
 
             //Crate an instance of the Headline Fragment
-            HeadlinesFragment headlinesFragment = new HeadlinesFragment();
+            ServersListFragment serversListFragment = new ServersListFragment();
 
-//            MyAdapterC myAdapterC=new MyAdapterC(getApplicationContext(), R.layout.row_c , null);
-//            headlinesFragment.setListAdapter(myAdapterC);
+//            ServersListAdapter myAdapterC=new ServersListAdapter(getApplicationContext(), R.layout.row_for_servers_list , null);
+//            serversListFragment.setListAdapter(myAdapterC);
 
             //In the case this activity was started with special instructions from an Intent,
             //pass the Intent's extras to the fragment as arguments
-            headlinesFragment.setArguments(getIntent().getExtras());
+            serversListFragment.setArguments(getIntent().getExtras());
 
             //Ask the Fragment manager to add it to the FrameLayout
             getFragmentManager().beginTransaction()
-                    .add(R.id.container,headlinesFragment)
+                    .add(R.id.container, serversListFragment)
                     .commit();
 
 
@@ -175,10 +175,10 @@ public void onBackPressed() {
         int id = item.getItemId();
 
         if (id == R.id.start_server) {
-            Intent myIntent = new Intent(MainActivity.this,ServerActivity.class);
+            Intent myIntent = new Intent(ClientActivity.this,ServerActivity.class);
             startActivity(myIntent);
         } else if (id == R.id.nav_send_problem) {
-            Intent myIntent = new Intent(MainActivity.this,SendProblemActivity.class);
+            Intent myIntent = new Intent(ClientActivity.this,SendProblemActivity.class);
             startActivity(myIntent);
         } else if (id == R.id.nav_send_app) {
 
@@ -196,11 +196,11 @@ public void onBackPressed() {
             startActivity(Intent.createChooser(intent, getResources().getString(R.string.ic_menu_send_app)));
 
         } else if (id == R.id.nav_guide) {
-            Intent myIntent = new Intent(MainActivity.this,HelpActivity.class);
+            Intent myIntent = new Intent(ClientActivity.this,HelpActivity.class);
             startActivity(myIntent);
 
         }  else if (id == R.id.nav_settings) {
-            Intent myIntent = new Intent(MainActivity.this,SettingsActivity.class);
+            Intent myIntent = new Intent(ClientActivity.this,SettingsActivity.class);
             startActivity(myIntent);
         }
 

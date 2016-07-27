@@ -5,7 +5,7 @@ import java.util.ArrayList;
 /**
  * Created by EsiJOOn on 2016/07/19.
  */
-public class SubjectObj {
+public class SubjectObj {// element of ContentsObj that create subViews
     String title;
     String text;
     FileObj fileObj;

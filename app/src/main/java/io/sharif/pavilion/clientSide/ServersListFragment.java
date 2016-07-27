@@ -28,12 +28,12 @@ import io.sharif.pavilion.network.Utilities.ActionResult;
 import io.sharif.pavilion.utility.Statics;
 
 
-public class HeadlinesFragment extends Fragment {
+public class ServersListFragment extends Fragment {
 
     OnHeadlineSelectedListener callback;
     RecyclerView headRecyclerView;
-    MainActivity activity;
-    MyAdapterC adapter;
+    ClientActivity activity;
+    ServersListAdapter adapter;
 
     public interface OnHeadlineSelectedListener{
         public void onServerSelected(ServerObj serverObj);
@@ -65,7 +65,7 @@ public class HeadlinesFragment extends Fragment {
 
 
         headRecyclerView= (RecyclerView) getView().findViewById(R.id.head_recyclerview);
-        activity= (MainActivity) getActivity();
+        activity= (ClientActivity) getActivity();
 
         ArrayList<ServerObj> serverObjs= Statics.getFakeSavedServers(activity);
 
@@ -77,7 +77,7 @@ public class HeadlinesFragment extends Fragment {
                 for (ApInfo apInfo:scanResults){
                  s.add(new ServerObj(apInfo,new ContentsObj()));
                 }
-                adapter = new MyAdapterC(s, activity, activity);
+                adapter = new ServersListAdapter(s, activity, activity);
                 headRecyclerView.setAdapter(adapter);
                 //TODO layoutManager:
                 headRecyclerView.setLayoutManager(new LinearLayoutManager(activity));
@@ -150,7 +150,7 @@ pr("onReceiveFailure_errorCode:"+errorCode);
         Toast.makeText(activity,"starting scan...",Toast.LENGTH_LONG).show();
         clientService.scan();
 
-//        adapter = new MyAdapterC(serverObjs,activity,activity);
+//        adapter = new ServersListAdapter(serverObjs,activity,activity);
 //        headRecyclerView.setAdapter(adapter);
 //        //TODO layoutManager:
 //        headRecyclerView.setLayoutManager(new LinearLayoutManager(activity));

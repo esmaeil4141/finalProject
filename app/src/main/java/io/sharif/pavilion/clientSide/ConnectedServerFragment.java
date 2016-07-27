@@ -10,15 +10,13 @@ import android.widget.LinearLayout;
 import io.sharif.pavilion.R;
 import io.sharif.pavilion.model.ServerObj;
 
-/**
- * Created by learnovate on 3/30/14.
- */
+
 public class ConnectedServerFragment extends Fragment {
 
     final static String ARG_POSITION = "position";
 //    private int currentPosition = -1;
     ServerObj currentServerObj=null;
-    MainActivity activity;
+    ClientActivity activity;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -32,7 +30,7 @@ public class ConnectedServerFragment extends Fragment {
 
         }
         //inflate the view for this fragment
-        View myFragmentView = inflater.inflate(R.layout.article_fragment,container,false);
+        View myFragmentView = inflater.inflate(R.layout.connected_server_fragment,container,false);
         return myFragmentView;
 
     }
@@ -86,6 +84,6 @@ public class ConnectedServerFragment extends Fragment {
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        this.activity= (MainActivity) getActivity();
+        this.activity= (ClientActivity) getActivity();
     }
 }

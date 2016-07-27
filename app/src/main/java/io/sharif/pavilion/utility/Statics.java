@@ -12,16 +12,15 @@ import io.sharif.pavilion.model.ServerObj;
 import io.sharif.pavilion.model.contents.ContentsObj;
 import io.sharif.pavilion.model.contents.SubjectObj;
 
-/**
- * Created by EsiJOOn on 2016/07/19.
- */
+
+
 public class Statics {
     static String dady="0123456789abcdefghijklmnopqrstuvwxyz";
 
-    public static String convertNumToCharacter(int num){
+    public static String convertNumToCharacter(int num){//used for coding iconNum in serverName
         return dady.charAt(num)+"";
     }
-    public static int convertCharacterToNum(String c){
+    public static int convertCharacterToNum(String c){//used for decoding iconNum in serverName
         return dady.indexOf(c);
     }
     public static int getIdOfIcon( int num){
@@ -30,7 +29,7 @@ public class Statics {
                 R.drawable.icon1,
                 R.drawable.icon2,
                 R.drawable.icon3
-
+                //TODO list isn't complete... (add other Icons )
         };
         return icons[num];
     }

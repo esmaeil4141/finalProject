@@ -9,17 +9,15 @@ import android.widget.TextView;
 import io.sharif.pavilion.R;
 import io.sharif.pavilion.model.ServerObj;
 
-/**
- * Created by EsiJOOn on 2016/07/20.
- */
+
 public class MyViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener{
     View view;
-    MainActivity activity;
+    ClientActivity activity;
     ImageView imageView;
     TextView server_name;
     ServerObj serverObj;
 
-    public MyViewHolder(View itemView,MainActivity activity) {
+    public MyViewHolder(View itemView,ClientActivity activity) {
         super(itemView);
         this.view=itemView;
         view.setOnClickListener(this);
@@ -34,7 +32,7 @@ public class MyViewHolder extends RecyclerView.ViewHolder implements View.OnClic
     }
     @Override
     public void onClick(View v) {
-        HeadlinesFragment.OnHeadlineSelectedListener h=activity;
+        ServersListFragment.OnHeadlineSelectedListener h=activity;
         h.onServerSelected(serverObj);
         Log.d("MyViewHolder.onClick","OKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKk");
 

@@ -10,7 +10,7 @@ import java.util.ArrayList;
 /**
  * Created by EsiJOOn on 2016/07/19.
  */
-public class ContentsObj {
+public class ContentsObj {//this object has all info of server's contents (title and description of files and ...)
     ArrayList<SubjectObj> subjectObjObjsList =new ArrayList<>();
 
     public ContentsObj(){

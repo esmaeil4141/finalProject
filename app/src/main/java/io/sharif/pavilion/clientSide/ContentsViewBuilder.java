@@ -19,15 +19,14 @@ import io.sharif.pavilion.R;
 import io.sharif.pavilion.model.contents.ContentsObj;
 import io.sharif.pavilion.model.contents.SubjectObj;
 
-/**
- * Created by EsiJOOn on 2016/07/21.
- */
+
+
 public class ContentsViewBuilder {
     LayoutInflater inflater ;
-    MainActivity activity;
+    ClientActivity activity;
     public ContentsViewBuilder(Activity activity) {
         this.inflater = activity.getLayoutInflater();
-        this.activity= (MainActivity) activity;
+        this.activity= (ClientActivity) activity;
     }
 
 

@@ -31,9 +31,8 @@ import io.sharif.pavilion.network.Services.ServerService;
 import io.sharif.pavilion.network.Utilities.ActionResult;
 import io.sharif.pavilion.utility.Statics;
 
-/**
- * Created by EsiJOOn on 2016/07/21.
- */
+
+
 public class ContentsEditBuilder {
     LayoutInflater inflater ;
     ServerActivity activity;

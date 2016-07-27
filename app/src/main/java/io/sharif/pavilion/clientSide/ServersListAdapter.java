@@ -12,16 +12,15 @@ import io.sharif.pavilion.R;
 import io.sharif.pavilion.model.ServerObj;
 import io.sharif.pavilion.utility.Statics;
 
-/**
- * Created by EsiJOOn on 2016/07/18.
- */
-public class MyAdapterC extends RecyclerView.Adapter<MyViewHolder> {
+
+
+public class ServersListAdapter extends RecyclerView.Adapter<MyViewHolder> {
 
     List<ServerObj> serverObjs;
     Context context;
-    MainActivity activity;
+    ClientActivity activity;
 
-    public MyAdapterC(List<ServerObj> list, Context context, MainActivity activity) {
+    public ServersListAdapter(List<ServerObj> list, Context context, ClientActivity activity) {
         this.serverObjs=list;
         this.context=context;
         this.activity=activity;
@@ -32,7 +31,7 @@ public class MyAdapterC extends RecyclerView.Adapter<MyViewHolder> {
     public MyViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
 //      Inflate the layout, initialize the View Holder
         View v = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.row_c, parent, false);
+                .inflate(R.layout.row_for_servers_list, parent, false);
         MyViewHolder holder = new MyViewHolder(v,activity);
         return holder;
     }

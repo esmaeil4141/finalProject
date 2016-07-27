@@ -6,9 +6,8 @@ import io.sharif.pavilion.network.Utilities.*;
 import io.sharif.pavilion.network.DataStructures.*;
 import io.sharif.pavilion.network.Listeners.*;
 
-/**
- * Created by EsiJOOn on 2016/07/18.
- */
+
+
 public class MyWifiSacanListener implements WifiScanListener {
 
 

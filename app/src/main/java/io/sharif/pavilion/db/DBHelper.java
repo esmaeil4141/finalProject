@@ -13,9 +13,8 @@ import java.util.ArrayList;
 import io.sharif.pavilion.model.ServerObj;
 import io.sharif.pavilion.model.contents.ContentsObj;
 
-/**
- * Created by EsiJOOn on 2016/07/19.
- */
+
+
 public class DBHelper {
     private Context context;
     private SQLiteOpenHelper sqLiteOpenHelper;
