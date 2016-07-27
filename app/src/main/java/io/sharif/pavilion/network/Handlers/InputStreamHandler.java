@@ -19,32 +19,52 @@ import io.sharif.pavilion.network.Services.ProgressMonitor;
 import io.sharif.pavilion.network.Utilities.ActionResult;
 import io.sharif.pavilion.network.Utilities.Utility;
 
+/**
+ * This class is used to extract Message from socket input stream.
+ */
 public class InputStreamHandler extends Thread implements ProgressMonitor.GetMonitorData {
 
+    /**
+     * Simple enum to hold handler role to be able to call correct callbacks.
+     */
     public enum HandlerRole {
         SERVER,
         CLIENT
     }
 
+    private byte[] buffer = new byte[Utility.getTcpSegmentSize()*3]; // input stream buffer
+    private String baseAddress, fileName, fileExtension, suffix;
+    /**
+     * There are two threads reading and writing these members so they must be declared volatile
+     * to ensure that all reads see the earlier write.(Memory Visibility)
+     */
     private AtomicLong totalLength, readBytes;
+    private ProgressMonitor progressMonitor; // this class is used calculate download speed
+    private boolean folderIsPresent = true; // indicates existence of app folder, where received files are stored
     private long fileReadBytes;
-    private boolean folderIsPresent = true;
-    private String baseAddress, fileName, fileExtension, connectedSSID, suffix;
-    private ClientDevice clientDevice;
-    private ClientService clientService;
-    private byte[] buffer = new byte[Utility.getTcpSegmentSize()*3];
     private File folder, file;
 
-    private final HandlerRole role;
-    private final DataInputStream dataInputStream;
-    private final ReceiveMessageListener receiveMessageListener;
-
-    private ProgressMonitor progressMonitor;
     private ClientListener clientListener;
-    private ServerListener serverListener;
+    private ClientService clientService;
+    private String connectedSSID; // currently connected wifi network name
 
+    private ServerListener serverListener;
+    private ClientDevice clientDevice;
+
+    private final ReceiveMessageListener receiveMessageListener; // received message are delivered to receive listener
+    private final DataInputStream dataInputStream; // socket input stream wrapped in DataInputStream
+    private final HandlerRole role;
     private final Context context;
 
+    /**
+     * Public constructor for handling server input stream in client service
+     * @param context application context
+     * @param dataInputStream input stream to read data from
+     * @param receiveMessageListener listener being called on message receive
+     * @param clientListener client service callbacks
+     * @param clientService client service
+     * @param connectedSSID currently connected wifi network name
+     */
     public InputStreamHandler(Context context,
                               DataInputStream dataInputStream,
                               ReceiveMessageListener receiveMessageListener,
@@ -60,6 +80,14 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
         this.role = HandlerRole.CLIENT;
     }
 
+    /**
+     * Public constructor for handling client input stream in server service
+     * @param context application context
+     * @param dataInputStream input stream to read data from
+     * @param receiveMessageListener listener being called on message receive
+     * @param serverListener server service callbacks
+     * @param clientDevice client which it's input stream is going to be read
+     */
     public InputStreamHandler(Context context,
                               DataInputStream dataInputStream,
                               ReceiveMessageListener receiveMessageListener,
@@ -73,11 +101,19 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
         this.role = HandlerRole.SERVER;
     }
 
+    /**
+     * This method provides total message length for ProgressMonitor object.
+     * @return total message length
+     */
     @Override
     public long getTotalBytes() {
         return totalLength.get();
     }
 
+    /**
+     * This method provides total read bytes for ProgressMonitor object.
+     * @return total read bytes by the time of calling
+     */
     @Override
     public long getSentBytes() {
         return readBytes.get();
@@ -86,6 +122,7 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
     @Override
     public void run() {
 
+        // check if input data is not null
         if (dataInputStream == null) return;
         if (role == HandlerRole.SERVER && clientDevice == null) return;
         if (role == HandlerRole.CLIENT && connectedSSID == null) return;
@@ -102,7 +139,7 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
 
             while (!Thread.currentThread().isInterrupted()) {
 
-                temp_int = dataInputStream.readInt();
+                temp_int = dataInputStream.readInt(); // first int number is message ID
 
                 readBytes.set(0);
                 totalLength.set(0);
@@ -117,26 +154,30 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
                     });
                 }
 
-                final Message message = new Message(temp_int);
+                final Message message = new Message(temp_int); // create a message object with received ID
 
-                totalLength.set(dataInputStream.readLong());
+                totalLength.set(dataInputStream.readLong()); // next long number is message total length
 
-                progressMonitor.enableUpdate();
+                progressMonitor.enableUpdate(); // start progressMonitor to calculate download speed
 
-                message.setMessage(dataInputStream.readUTF());
+                message.setMessage(dataInputStream.readUTF()); // next UTF string is text message
 
+                // increment read bytes by the length of received text message (atomic operation)
                 readBytes.addAndGet(message.getMessage().getBytes("UTF-8").length);
 
-                // no race in if expression, as the other thread is not going readBytes or totalLenght values
+                // no race in if expression, as the other thread is not going to change readBytes or totalLength values
                 if (readBytes.get() < totalLength.get()) {
 
-                    // it means that we have at least one file in message
+                    // by entering here it means that we have at least one file in message
 
                     if (role == HandlerRole.CLIENT) {
+                        // received files in client are stored in : /(appFolderPath)/serverName/
                         if (suffix == null) suffix = Utility.getServerName(connectedSSID);
                     }
-                    else if (role == HandlerRole.SERVER)
+                    else if (role == HandlerRole.SERVER) {
+                        // received files in server are stored in : /(appFolderPath)/(int_value_of_client_IP_address)/
                         if (suffix == null) suffix = String.valueOf(Utility.ipToLong(clientDevice.getIpAddr()));
+                    }
 
                     if (baseAddress == null) baseAddress = Utility.getAppFolderPath() + suffix;
 
@@ -153,7 +194,7 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
                             readFileResult = readFile();
 
                             if (readFileResult)
-                                message.addUri(Uri.fromFile(file));
+                                message.addUri(Uri.fromFile(file)); // add file URI to message URI list
 
                         }
                     }
@@ -222,16 +263,22 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
 
     }
 
+    /**
+     * This method is used to read a file from input stream.
+     * @return {@code true} if operation succeeds, {@code false} otherwise
+     * @throws IOException if peer closes the connection before fully receiving the file.
+     * @throws NullPointerException if socket is closed in the middle of reading.
+     */
     private boolean readFile() throws IOException, NullPointerException {
 
-        fileName = dataInputStream.readUTF();
-        fileExtension = dataInputStream.readUTF();
+        fileName = dataInputStream.readUTF(); // next UTF string is current file name string
+        fileExtension = dataInputStream.readUTF(); // next UTF string is current file extension such as ".pdf"
 
-        long temp_long = dataInputStream.readLong();
+        long temp_long = dataInputStream.readLong(); // next long is current file size
 
         file = new File(baseAddress + File.separator + fileName + fileExtension);
 
-        setCreatableFile();
+        setCreatableFile(); // check if the file already exists
 
         boolean createFileResult = file.createNewFile();
 
@@ -243,6 +290,7 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
             while (fileReadBytes < temp_long) {
 
                 if ((count = dataInputStream.read(buffer)) == -1) {
+                    // peer closed the connection
                     fileOutputStream.close();
                     throw new IOException();
                 }
@@ -264,6 +312,10 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
         return false;
     }
 
+    /**
+     * This method is used to prevent file overwrites. It check for existence of {@code file} and appends
+     * a string i.e. _number to end of file name if it already exists.
+     */
     private void setCreatableFile() {
         for (int copyCounter = 1; file.exists() ; copyCounter++) {
             file = new File(baseAddress
