@@ -188,3 +188,19 @@ public void pr(String msg){
     Log.d("myPavilion",msg);
 }
 }
+
+class MyWifiScanListener implements WifiScanListener{
+    Activity activity;
+
+
+
+    @Override
+    public void onWifiScanFinished(List<ApInfo> scanResults) {
+
+    }
+
+    @Override
+    public void onFailure(ActionResult errorCode) {
+
+    }
+}
