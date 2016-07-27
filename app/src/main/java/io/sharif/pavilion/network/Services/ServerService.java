@@ -19,12 +19,9 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import io.sharif.pavilion.network.DataStructures.ClientDevice;
 import io.sharif.pavilion.network.DataStructures.Message;
@@ -148,14 +145,6 @@ public class ServerService extends BroadcastReceiver {
 
     private String generateSSID() {
         return SSID_PREFIX + this.name;
-    }
-
-    public String getSSIdPrefix() {
-        return SSID_PREFIX;
-    }
-
-    public int getPasswordLength() {
-        return PASSWORD_LENGTH;
     }
 
     /**
