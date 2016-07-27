@@ -459,6 +459,12 @@ Activity activity;
     public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
         if(isChecked){// enable server
             serverService=new ServerService(activity, new ServerListener() {
+
+                @Override
+                public void onSocketCreateFailure() {
+
+                }
+
                 @Override
                 public void onClientJoined(ClientDevice client) {
 
@@ -486,6 +492,16 @@ Activity activity;
 
                 @Override
                 public void onServerStarted() {
+
+                }
+
+                @Override
+                public void onSocketCreated() {
+
+                }
+
+                @Override
+                public void onSocketClosed() {
 
                 }
 

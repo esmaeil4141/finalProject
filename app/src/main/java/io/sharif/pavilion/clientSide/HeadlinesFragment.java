@@ -83,10 +83,6 @@ public class HeadlinesFragment extends Fragment {
                 headRecyclerView.setLayoutManager(new LinearLayoutManager(activity));
             }
 
-            @Override
-            public void onFailure(ActionResult errorCode) {
-
-            }
         },
                 new ClientListener() {
                     @Override
@@ -99,6 +95,10 @@ pr("onJoinedGroup");
 pr("onConnected");
                     }
 
+                    @Override
+                    public void onConnectionFailure() {
+
+                    }
                     @Override
                     public void onDisconnected() {
 pr("onDisconnected");
