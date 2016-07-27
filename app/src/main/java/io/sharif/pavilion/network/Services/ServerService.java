@@ -33,6 +33,9 @@ import io.sharif.pavilion.network.Listeners.WifiListener;
 import io.sharif.pavilion.network.Utilities.ActionResult;
 import io.sharif.pavilion.network.Utilities.Utility;
 
+/**
+ * This class is used to provide services for servers.
+ */
 public class ServerService extends BroadcastReceiver {
 
     public static final String WIFI_AP_STATE_CHANGED_ACTION =
@@ -54,9 +57,8 @@ public class ServerService extends BroadcastReceiver {
     public static final int PASSWORD_LENGTH = 16;
     public static final String SSID_PREFIX = "!1!-";
 
-    private String name;
-
     private boolean wifiConfigChanged, isWifiApEnabled, receiverRegistered, callServerStart;
+    private String name; // server name, shown to clients
 
     private final ReceiveMessageListener receiveMessageListener;
     private final ServerListener serverListener;
@@ -68,6 +70,12 @@ public class ServerService extends BroadcastReceiver {
     private ClientScanner clientScanner;
     private ServerSocket serverSocket;
 
+    /**
+     * @param context application context
+     * @param serverListener server callbacks
+     * @param wifiListener wifi callbacks
+     * @param receiveMessageListener receive message callbacks
+     */
     public ServerService(Context context,
                          ServerListener serverListener,
                          WifiListener wifiListener,
@@ -85,8 +93,7 @@ public class ServerService extends BroadcastReceiver {
     }
 
     /**
-     * This method first sends a request to enable hotspot and sets a flag to automatically call openServerSocket
-     * to create server socket when hotspot is enabled.
+     * This method is used to register receivers, stat client scanner and enable hotspot.
      * @return {@code SUCCESS} if config is valid and operation succeeds, {@code FAILURE} otherwise
      */
     public ActionResult start() {
@@ -113,8 +120,8 @@ public class ServerService extends BroadcastReceiver {
     }
 
     /**
-     * This method first closes server socket and then send a request to disable hotspot
-     * @return {@code SUCCESS} if server socket and hotspot are successfully closed, {@code FAILURE} otherwise
+     * This method is used to stop client scanner, unregister receivers and disable hotspot.
+     * @return {@code SUCCESS} if operations succeed, {@code FAILURE} otherwise
      */
     public ActionResult stop() {
         if (receiverRegistered) {
@@ -129,8 +136,8 @@ public class ServerService extends BroadcastReceiver {
     }
 
     /**
-     * This method is used to create wifi configuration based on server name and password. Network wifi will
-     * be open if password is an empty string.
+     * This method is used to create wifi configuration based on server name.
+     * Server password will be a substring of ssid MD5 hash.
      * @return newly created wifi configuration
      */
     private WifiConfiguration getNewConfig() {
@@ -143,6 +150,10 @@ public class ServerService extends BroadcastReceiver {
         return wifiConfiguration;
     }
 
+    /**
+     * This method is used to generate ssid from server name.
+     * @return server ssid
+     */
     private String generateSSID() {
         return SSID_PREFIX + this.name;
     }
@@ -157,16 +168,16 @@ public class ServerService extends BroadcastReceiver {
 
     /**
      * This method is used to check whether current server name is valid.
-     * @return {@code false} if name is null or empty, or password is null or it only contains whitespace, or
-     * name length plus ssid prefix length exceeds maximum ssid length.
-     * {@code true} otherwise
+     * @return {@code false} if name is null or empty, or
+     * name length plus ssid prefix length exceeds maximum ssid length, {@code true} otherwise
      */
     private boolean isNameValid() {
         return name != null && !name.trim().equals("") && name.length() <= MAXIMUM_SSID_LENGTH - SSID_PREFIX.length();
     }
 
     /**
-     * Start hotspot with the specified configuration, update the configuration if it's already running.
+     * This method is used to start hotspot with the specified configuration,
+     * update the configuration if it's already running.
      * This method also can be used to stop currently running hotspot.
      * @param wifiConfig WiFi configuration, set null to use existing configuration
      * @param enabled enable or disable hotspot
@@ -186,7 +197,7 @@ public class ServerService extends BroadcastReceiver {
     }
 
     /**
-     * This method sets the server name that is shown to clients in available servers list.
+     * This method is used to set server name that is shown to clients in available servers list.
      * @param name server name
      * @return {@code FAILURE} if name is null or empty, {@code SUCCESS} otherwise
      */
@@ -197,6 +208,13 @@ public class ServerService extends BroadcastReceiver {
         return ActionResult.SUCCESS;
     }
 
+    /**
+     * This method is used to send message to clients.
+     * @param clientID client to send message to
+     * @param message message to send
+     * @param sendMessageListener send message callbacks
+     * @return {@code SUCCESS} if message is not null and the client is connected, {@code FAILURE} otherwise
+     */
     public ActionResult sendMessage(String clientID,
                                     Message message,
                                     final SendMessageListener sendMessageListener) {
@@ -227,7 +245,8 @@ public class ServerService extends BroadcastReceiver {
     }
 
     /**
-     * This method can be used to get hotspot status but it lack some delay when hotspot is stopped and started immediately again.
+     * This method can be used to get hotspot status
+     * but it lack some delay when hotspot is stopped and started immediately again.
      * Kept for future use.
      * @return returns hotspot state
      */
@@ -246,7 +265,7 @@ public class ServerService extends BroadcastReceiver {
     }
 
     /**
-     * Check whether or not hotspot is enabled
+     * This method is used to check whether or not hotspot is enabled.
      * @return {@code true} if hotspot is enabled, {@code false} otherwise
      */
     public boolean isApEnabled() {
@@ -256,16 +275,18 @@ public class ServerService extends BroadcastReceiver {
     }
 
     /**
-     * This method retrieves a list of currently connected clients.
+     * This method is used to retrieve a list of currently connected clients.
      * @param onlyReachables {@code false} if the list should contain unreachable (probably disconnected) clients, {@code true} otherwise
-     * @return a list of clientDevice objects
+     * @return list of clientDevice objects
      */
     public List<ClientDevice> getClientsList(final boolean onlyReachables) {
         return clientScanner.getClientsList(onlyReachables);
     }
 
-
-
+    /**
+     * This method is used to close all client sockets and server socket.
+     * @return {@code SUCCESS} if operation succeeds, {@code FAILURE} otherwise
+     */
     public ActionResult closeServerSocket() {
         if (serverSocket != null) {
             clientScanner.closeClients();
@@ -278,7 +299,10 @@ public class ServerService extends BroadcastReceiver {
         return ActionResult.SUCCESS;
     }
 
-    public ActionResult createServerSocket() {
+    /**
+     * This method is used to create server socket.
+     */
+    public void createServerSocket() {
 
         new Thread(new Runnable() {
             @Override
@@ -304,9 +328,10 @@ public class ServerService extends BroadcastReceiver {
 
                         clientSocket = serverSocket.accept();
 
-                        inetAddress = clientSocket.getInetAddress();
+                        inetAddress = clientSocket.getInetAddress(); // get client IP address
                         if (inetAddress != null) {
 
+                            // set client socket in the list
                             final ClientDevice newClient = clientScanner.setClientSocket(inetAddress.getHostAddress(), clientSocket);
 
                             if (newClient != null) {
@@ -318,6 +343,7 @@ public class ServerService extends BroadcastReceiver {
                                         }
                                     });
 
+                                // create a handler to handle client input stream
                                 new InputStreamHandler(
                                         context,
                                         new DataInputStream(newClient.getInputStream()),
@@ -351,13 +377,8 @@ public class ServerService extends BroadcastReceiver {
                 }
             }
         }).start();
-
-        return ActionResult.SUCCESS;
     }
 
-    /**
-     * Handles WIFI_AP_STATE_CHANGED_ACTION & WIFI_STATE_CHANGED_ACTION actions
-     */
     @Override
     public void onReceive(Context context, Intent intent) {
 
@@ -401,6 +422,9 @@ public class ServerService extends BroadcastReceiver {
      */
     public class ClientScanner extends Thread {
 
+        /**
+         * CopyOnWriteArrayList is used to prevent ConcurrentModificationException while iterating clients list.
+         */
         private final CopyOnWriteArrayList<ClientDevice> clientsList;
 
         public ClientScanner() {
@@ -408,8 +432,8 @@ public class ServerService extends BroadcastReceiver {
         }
 
         /**
-         * This method periodically check arp table to detect when client join or leave the network. The interval between
-         * periods is set using SCAN_CLIENT_INTERVAL parameter.
+         * This method is used to periodically check arp table to detect when client join or leave the network.
+         * The interval between periods is set using SCAN_CLIENT_INTERVAL parameter.
          */
         @Override
         public void run() {
@@ -444,17 +468,25 @@ public class ServerService extends BroadcastReceiver {
 
         }
 
+        /**
+         * This method is used to search clients list by client ID.
+         * @param clientID client ID to search for
+         * @return clientDevice object if found, {@code null} otherwise
+         */
         private ClientDevice getClient(String clientID) {
             Iterator<ClientDevice> iterator = clientsList.iterator();
             ClientDevice clientDevice;
             while (iterator.hasNext()) {
                 clientDevice = iterator.next();
-                if (clientDevice != null && clientDevice.getID() != null && clientDevice.getID().equals(clientID))
+                if (clientDevice.getID() != null && clientDevice.getID().equals(clientID))
                     return clientDevice;
             }
             return null;
         }
 
+        /**
+         * This method is used to close all clients socket.
+         */
         private void closeClients() {
             Iterator<ClientDevice> iterator = clientsList.iterator();
             ClientDevice clientDevice;
@@ -464,6 +496,12 @@ public class ServerService extends BroadcastReceiver {
             }
         }
 
+        /**
+         * This method is used to set client socket.
+         * @param clientIP client IP to search for
+         * @param clientSocket client socket to sent
+         * @return clientDevice object if found, {@code null} otherwise
+         */
         private ClientDevice setClientSocket(String clientIP, Socket clientSocket) {
             Iterator<ClientDevice> iterator = clientsList.iterator();
             ClientDevice clientDevice;
@@ -511,6 +549,11 @@ public class ServerService extends BroadcastReceiver {
             return Pair.create(br, result);
         }
 
+        /**
+         * This method is used to get a list of connected clients.
+         * @param onlyReachables {@code true} if the list should only contain reachable clients, {@code false} otherwise
+         * @return list of clients
+         */
         private List<ClientDevice> getClientsList(final boolean onlyReachables) {
             List<ClientDevice> newList = new ArrayList<>();
             Iterator<ClientDevice> iterator = clientsList.iterator();
@@ -524,8 +567,8 @@ public class ServerService extends BroadcastReceiver {
         }
 
         /**
-         * This method handles clients scan result. This method compares the newly list of clients with the stored list to
-         * detect new client or the clients who has left the network.
+         * This method is used to handle the scan result. It compares the newly retrieved list of clients
+         * with the stored list to detect new clients or the clients who has left the network.
          * @param list recently detected list of clients
          * @return {@code FAILURE} if new list is null, {@code SUCCESS} otherwise
          */

@@ -34,11 +34,14 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
 
     private byte[] buffer = new byte[Utility.getTcpSegmentSize()*3]; // input stream buffer
     private String baseAddress, fileName, fileExtension, suffix;
+
     /**
      * There are two threads reading and writing these members so they must be declared volatile
      * to ensure that all reads see the earlier write.(Memory Visibility)
+     * Also operations on them must be atomic so AtomicLong is used.
      */
-    private AtomicLong totalLength, readBytes;
+    private volatile AtomicLong totalLength, readBytes;
+
     private ProgressMonitor progressMonitor; // this class is used calculate download speed
     private boolean folderIsPresent = true; // indicates existence of app folder, where received files are stored
     private long fileReadBytes;

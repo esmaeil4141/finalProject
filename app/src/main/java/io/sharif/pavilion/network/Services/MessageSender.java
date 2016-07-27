@@ -15,18 +15,31 @@ import io.sharif.pavilion.network.Utilities.ActionResult;
 import io.sharif.pavilion.network.Utilities.FileUtils;
 import io.sharif.pavilion.network.Utilities.Utility;
 
+/**
+ * This class is used to send messages.
+ */
 public class MessageSender extends Thread implements ProgressMonitor.GetMonitorData {
 
+    private final SendMessageListener sendMessageListener;
+    private final DataOutputStream dataOutputStream;
+    private ProgressMonitor progressMonitor; // progress monitor to calculate upload speed
     private final Message message;
     private final Context context;
-    private final DataOutputStream dataOutputStream;
-    private final SendMessageListener sendMessageListener;
-
-    private AtomicLong totalLength, bytesSent;
-
     private File file;
-    private ProgressMonitor progressMonitor;
 
+    /**
+     * There are two threads reading and writing these members so they must be declared volatile
+     * to ensure that all reads see the earlier write.(Memory Visibility)
+     * Also operations on them must be atomic so the AtomicLong is used.
+     */
+    private volatile AtomicLong totalLength, bytesSent;
+
+    /**
+     * @param context application context
+     * @param message message to send
+     * @param dataOutputStream output stream to write message on
+     * @param sendMessageListener send message listener
+     */
     public MessageSender(
             Context context,
             Message message,
@@ -40,11 +53,19 @@ public class MessageSender extends Thread implements ProgressMonitor.GetMonitorD
         this.bytesSent = new AtomicLong();
     }
 
+    /**
+     * This method provides total message length for ProgressMonitor object.
+     * @return total message length
+     */
     @Override
     public long getTotalBytes() {
         return totalLength.get();
     }
 
+    /**
+     * This method provides total read bytes for ProgressMonitor object.
+     * @return total read bytes by the time of calling
+     */
     @Override
     public long getSentBytes() {
         return bytesSent.get();
@@ -64,25 +85,26 @@ public class MessageSender extends Thread implements ProgressMonitor.GetMonitorD
                 bytesSent.set(0);
 
                 progressMonitor = new ProgressMonitor(context, this, sendMessageListener);
-                progressMonitor.enableUpdate();
+                progressMonitor.enableUpdate(); // start progress monitor to calculate upload speed
 
-                dataOutputStream.writeInt(message.getID());
-                dataOutputStream.writeLong(totalLength.get());
+                dataOutputStream.writeInt(message.getID()); // first send message ID
+                dataOutputStream.writeLong(totalLength.get()); // next is message total length
 
                 if (message.getMessage() == null) message.setMessage("");
 
                 String msg = message.getMessage();
 
-                dataOutputStream.writeUTF(msg);
-                bytesSent.addAndGet(msg.getBytes("UTF-8").length);
+                dataOutputStream.writeUTF(msg); // next is text message
+                bytesSent.addAndGet(msg.getBytes("UTF-8").length); // increment sent bytes (atomic)
 
+                // sending files if any
                 if (message.getFileUris() != null) {
 
                     for (Uri uri : message.getFileUris()) {
 
                         if (uri != null) {
 
-                            address = FileUtils.getPath(context, uri);
+                            address = FileUtils.getPath(context, uri); // get path from uri
                             if (address != null)
                                 if ((file = new File(address)).exists())
                                     sendFile();
@@ -115,6 +137,11 @@ public class MessageSender extends Thread implements ProgressMonitor.GetMonitorD
         }
     }
 
+    /**
+     * This method is used to write a file on an output stream.
+     * @return {@code true} if operation succeeds, {@code false} otherwise
+     * @throws IOException when other peer closes the connection
+     */
     private boolean sendFile() throws IOException {
 
         if (file != null && dataOutputStream != null) {
