@@ -211,9 +211,9 @@ public class ClientService extends BroadcastReceiver {
 
             return wifiManager.disconnect()
                     && wifiManager.enableNetwork(networkID, true)
-                    && wifiManager.reconnect() ? ActionResult.JOIN_SUCCESSFUL : ActionResult.JOIN_FAILED;
+                    && wifiManager.reconnect() ? ActionResult.SUCCESS : ActionResult.FAILURE;
         } else
-            return ActionResult.JOIN_FAILED;
+            return ActionResult.FAILURE;
     }
 
     // disconnect from currently connected server
