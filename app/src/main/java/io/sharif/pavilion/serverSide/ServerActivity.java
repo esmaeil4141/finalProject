@@ -19,7 +19,7 @@ import io.sharif.pavilion.model.ServerObj;
 import io.sharif.pavilion.model.contents.ContentsObj;
 import io.sharif.pavilion.model.contents.FileObj;
 import io.sharif.pavilion.model.contents.SubjectObj;
-import io.sharif.pavilion.network.Utilities.Utility;
+import io.sharif.pavilion.network.Services.ServerService;
 import io.sharif.pavilion.utility.Statics;
 
 public class ServerActivity extends AppCompatActivity {
@@ -27,6 +27,7 @@ public class ServerActivity extends AppCompatActivity {
     SubjectObj waitingSubjectForFile;
     TextView waitingTVForFile;
     ContentsObj waitingContentsObj;
+    public  ServerService serverService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

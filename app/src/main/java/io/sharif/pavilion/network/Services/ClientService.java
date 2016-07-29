@@ -12,6 +12,7 @@ import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.text.format.Formatter;
+import android.util.Log;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -340,12 +341,16 @@ public class ClientService extends BroadcastReceiver {
         } else if (WifiManager.SCAN_RESULTS_AVAILABLE_ACTION.equals(action)) {
 
             // check whether user has registered scan request or scan result is from system automatic scan
+           Log.d("myPavilion","inside wifi receive");
             if (wifiScanListener != null && scanRequested) {
+                Log.d("myPavilion","inside scanRequested");
+
                 scanRequested = false;
                 List<ScanResult> scanResults = wifiManager.getScanResults();
                 List<ApInfo> serversList = new ArrayList<>();
 
                 String ssid, name;
+                Log.d("myPavilion","scanResults size:"+scanResults.size());
 
                 for (ScanResult result : scanResults) {
                     ssid = result.SSID;
@@ -360,7 +365,9 @@ public class ClientService extends BroadcastReceiver {
                         serversList.add(apInfo);
                     }
                 }
-
+                Log.d("myPavilion","scanResult...size:"+scanResults.size());
+                Log.d("myPavilion","inside servers scaniing...size:"+serversList.size());
+for(ApInfo apInfo:serversList) Log.d("myPavilion",apInfo.getName());
                 wifiScanListener.onWifiScanFinished(serversList);
 
             }

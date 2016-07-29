@@ -36,6 +36,7 @@ import io.sharif.pavilion.utility.Statics;
 public class ContentsEditBuilder {
     LayoutInflater inflater ;
     ServerActivity activity;
+
     public ContentsEditBuilder(Activity activity) {
         this.inflater = activity.getLayoutInflater();
         this.activity= (ServerActivity) activity;
@@ -56,7 +57,7 @@ public class ContentsEditBuilder {
         // set textWatcher for serverName EditText to save changes
         serverNameEditText.addTextChangedListener(new ServerNameWatcher(activity) );
 
-        // set filter for serverName
+        // set filter for serverName (just lower case english letters and numbers are valid)
         InputFilter filter = new InputFilter() {
             public CharSequence filter(CharSequence source, int start, int end,
                                        Spanned dest, int dstart, int dend) {
@@ -75,7 +76,7 @@ public class ContentsEditBuilder {
         serverSwith.setOnCheckedChangeListener(new SwitchChangeListener(activity));
 
 
-
+//create contentsView:
             addSmallSubject.setOnClickListener(new AddSmallSubjectListener(activity,contentsObj,layout));
             addBigSubject.setOnClickListener(new AddBigSubjectListener(activity,contentsObj,layout));
             for (SubjectObj subjectObj:contentsObj.getSubjectObjObjsList()){
@@ -88,12 +89,12 @@ public class ContentsEditBuilder {
                     textTV.addTextChangedListener(new EditTextChangeListener(contentsObj,false,subjectObj,activity));
                     titleTV.setText(subjectObj.getTitle());
                     textTV.setText(subjectObj.getText());
-////////////delete button:
+         //delete button:
                         ImageButton deleteButton= (ImageButton) smallView.findViewById(R.id.delete_icon);
                         deleteButton.setOnClickListener(
                                 new BigSmallDeleteListener(contentsObj,smallView,subjectObj)
                         );
-////////////attach button:
+         //attach button:
                     ImageButton attachButton= (ImageButton) smallView.findViewById(R.id.attach_button);
                     TextView fileNameTV= (TextView) smallView.findViewById(R.id.file_tv);
                     attachButton.setOnClickListener(new AttachListener(activity,fileNameTV,subjectObj,contentsObj));
@@ -447,101 +448,118 @@ Activity activity;
 }
 
 class SwitchChangeListener implements CompoundButton.OnCheckedChangeListener{
-Activity activity;
-    ServerService serverService;
+ServerActivity activity;
+String TAG="myPavilion";
 
-    public SwitchChangeListener(Activity activity) {
+    public SwitchChangeListener(ServerActivity activity) {
         this.activity = activity;
     }
 
     @Override
     public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
         if(isChecked){// enable server
-            serverService=new ServerService(activity, new ServerListener() {
+            activity.serverService=new ServerService(activity, new ServerListener() {
 
                 @Override
                 public void onSocketCreateFailure() {
-
+                Log.d(TAG,"onSocketCreateFailure");
                 }
 
                 @Override
                 public void onClientJoined(ClientDevice client) {
+                    Log.d(TAG,"onClientJoined");
 
                 }
 
                 @Override
                 public void onClientConnected(ClientDevice client) {
+                    Log.d(TAG,"onClientConnected");
 
                 }
 
                 @Override
                 public void onClientDisconnected(ClientDevice client) {
+                    Log.d(TAG,"onClientDisconnected");
 
                 }
 
                 @Override
                 public void onClientLeft(ClientDevice client) {
+                    Log.d(TAG,"onClientLeft");
 
                 }
 
                 @Override
                 public void onApEnabled() {
+                    Log.d(TAG,"onApEnabled");
 
                 }
 
                 @Override
                 public void onServerStarted() {
+                    Log.d(TAG,"onServerStarted");
 
                 }
 
                 @Override
                 public void onSocketCreated() {
+                    Log.d(TAG,"onSocketCreated");
 
                 }
 
                 @Override
                 public void onSocketClosed() {
+                    Log.d(TAG,"onSocketClosed");
 
                 }
 
                 @Override
                 public void onServerStopped() {
+                    Log.d(TAG,"onServerStopped");
 
                 }
 
                 @Override
                 public void onApDisabled() {
+                    Log.d(TAG,"onApDisabled");
 
                 }
 
                 @Override
                 public void onMessageReceived(String clientID, Message message) {
+                    Log.d(TAG,"onMessageReceived");
 
                 }
             } ,  null,new ReceiveMessageListener(){
 
                 @Override
                 public void onReceiveStart() {
+                    Log.d(TAG,"onReceiveStart");
 
                 }
 
                 @Override
                 public void onProgress(float progress, float speed, long totalSize, long received) {
+                    Log.d(TAG,"onProgress");
 
                 }
 
                 @Override
                 public void onReceiveFailure(ActionResult errorCode) {
+                    Log.d(TAG,"onReceiveFailure");
 
                 }
             } );
             String apName=Statics.getServerName(activity)+Statics.convertNumToCharacter(Statics.getServerIconId(activity));
-            serverService.setApName(apName);
-            serverService.start();
+            activity.serverService.setApName(apName);
+            activity.serverService.start();
+            activity.serverService.createServerSocket();
+
             Toast.makeText(activity,"سرور فعال شد",Toast.LENGTH_SHORT).show();
         }else{//disable server
-            if(serverService!=null){
-                serverService.stop();
+            if(activity.serverService!=null){
+                activity.serverService.closeServerSocket();
+                activity.serverService.stop();
                 Toast.makeText(activity,"سرور غیرفعال شد!",Toast.LENGTH_SHORT).show();
 
             }

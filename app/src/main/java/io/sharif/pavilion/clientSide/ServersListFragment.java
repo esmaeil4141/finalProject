@@ -2,6 +2,7 @@ package io.sharif.pavilion.clientSide;
 
 import android.app.Activity;
 import android.app.Fragment;
+import android.app.ProgressDialog;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -12,19 +13,15 @@ import android.view.ViewGroup;
 import android.widget.Toast;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import io.sharif.pavilion.R;
 import io.sharif.pavilion.model.ServerObj;
-import io.sharif.pavilion.model.contents.ContentsObj;
-import io.sharif.pavilion.network.DataStructures.ApInfo;
 import io.sharif.pavilion.network.DataStructures.Message;
 import io.sharif.pavilion.network.Listeners.ClientListener;
 import io.sharif.pavilion.network.Listeners.ReceiveMessageListener;
 import io.sharif.pavilion.network.Listeners.WifiListener;
-import io.sharif.pavilion.network.Listeners.WifiScanListener;
-import io.sharif.pavilion.network.Services.ClientService;
 import io.sharif.pavilion.network.Utilities.ActionResult;
+import io.sharif.pavilion.network.Utilities.Utility;
 import io.sharif.pavilion.utility.Statics;
 
 
@@ -65,25 +62,22 @@ public class ServersListFragment extends Fragment {
 
 
         headRecyclerView= (RecyclerView) getView().findViewById(R.id.head_recyclerview);
+        headRecyclerView.setLayoutManager(new LinearLayoutManager(activity));
+                adapter = new ServersListAdapter(new ArrayList<ServerObj>(), activity, activity);
+                headRecyclerView.setAdapter(adapter);
+
         activity= (ClientActivity) getActivity();
 
         ArrayList<ServerObj> serverObjs= Statics.getFakeSavedServers(activity);
+//        final ProgressDialog pd = ProgressDialog.show(activity, "افزودن کارت ها به جعبه", "یه خورده دندون رو جیگر بزار...");
+//        final ProgressDialog pds = ProgressDialog.show(activity, "افزودن کارت ها به جعبه", "یه خورده دندون رو جیگر بزار...");
+        ProgressDialog pd=new ProgressDialog(activity);
+        pd.setTitle("جست و جوی شبکه ها...");
+        Utility.enableWifi(activity);
 
-        ClientService clientService=new ClientService(activity, new WifiScanListener() {
-            @Override
-            public void onWifiScanFinished(List<ApInfo> scanResults) {
-                Toast.makeText(activity,"scan finished",Toast.LENGTH_LONG).show();
-                List<ServerObj> s=new ArrayList<>();
-                for (ApInfo apInfo:scanResults){
-                 s.add(new ServerObj(apInfo,new ContentsObj()));
-                }
-                adapter = new ServersListAdapter(s, activity, activity);
-                headRecyclerView.setAdapter(adapter);
-                //TODO layoutManager:
-                headRecyclerView.setLayoutManager(new LinearLayoutManager(activity));
-            }
+////////////Initial ClientService:
 
-        },
+        activity.clientService=new CustomClientService(activity, new CustomWifiScanListener(activity,adapter,pd),
                 new ClientListener() {
                     @Override
                     public void onJoinedGroup() {
@@ -146,9 +140,9 @@ pr("onProgress_ progress:"+progress+" speed:"+speed+ "  totalSize:"+totalSize+" 
 pr("onReceiveFailure_errorCode:"+errorCode);
                     }
                 });
-        clientService.start();
+        activity.clientService.start();
         Toast.makeText(activity,"starting scan...",Toast.LENGTH_LONG).show();
-        clientService.scan();
+        activity.clientService.scan();
 
 //        adapter = new ServersListAdapter(serverObjs,activity,activity);
 //        headRecyclerView.setAdapter(adapter);
@@ -189,18 +183,3 @@ public void pr(String msg){
 }
 }
 
-class MyWifiScanListener implements WifiScanListener{
-    Activity activity;
-
-
-
-    @Override
-    public void onWifiScanFinished(List<ApInfo> scanResults) {
-
-    }
-
-    @Override
-    public void onFailure(ActionResult errorCode) {
-
-    }
-}

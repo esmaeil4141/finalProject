@@ -48,4 +48,9 @@ public class ServersListAdapter extends RecyclerView.Adapter<MyViewHolder> {
 
         return serverObjs.size();
     }
+
+    public void updateList(List<ServerObj> newServerObjs) {
+        serverObjs = newServerObjs;
+        notifyDataSetChanged();
+    }
 }
