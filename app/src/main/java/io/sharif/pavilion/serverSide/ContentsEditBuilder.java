@@ -26,6 +26,7 @@ import io.sharif.pavilion.model.contents.SubjectObj;
 import io.sharif.pavilion.network.DataStructures.ClientDevice;
 import io.sharif.pavilion.network.DataStructures.Message;
 import io.sharif.pavilion.network.Listeners.ReceiveMessageListener;
+import io.sharif.pavilion.network.Listeners.SendMessageListener;
 import io.sharif.pavilion.network.Listeners.ServerListener;
 import io.sharif.pavilion.network.Services.ServerService;
 import io.sharif.pavilion.network.Utilities.ActionResult;
@@ -498,6 +499,7 @@ String TAG="myPavilion";
                 @Override
                 public void onServerStarted() {
                     Log.d(TAG,"onServerStarted");
+                    activity.serverService.createServerSocket();
 
                 }
 
@@ -527,7 +529,37 @@ String TAG="myPavilion";
 
                 @Override
                 public void onMessageReceived(String clientID, Message message) {
-                    Log.d(TAG,"onMessageReceived");
+                    Log.d(TAG,"onMessageReceived id:"+message.getID()+" message:"+message.getMessage());
+                    Message serverMessage=new Message(10);
+//                    serverMessage.setMessage(Statics.getServerContents(activity).getJson());
+                    serverMessage.setMessage(Statics.getFakeSavedServers(activity).get(0).getJson());
+                    //TODO null problems in
+                    //TODO get all uri from contents and add them to message
+                    SendMessageListener sendMessageListener=new SendMessageListener() {
+                        @Override
+                        public void onMessageSent(int msgID) {
+
+                        }
+
+                        @Override
+                        public void onProgress(float progress, float speed, long totalSize, long sent) {
+
+                        }
+
+                        @Override
+                        public void onFailure(ActionResult errorCode) {
+
+                        }
+                    };
+                    switch (message.getID()){
+                        case 0:
+                            activity.serverService.sendMessage(clientID,serverMessage,sendMessageListener);
+                            break;
+                        case 1:
+                            break;
+
+
+                    }
 
                 }
             } ,  null,new ReceiveMessageListener(){
@@ -553,7 +585,7 @@ String TAG="myPavilion";
             String apName=Statics.getServerName(activity)+Statics.convertNumToCharacter(Statics.getServerIconId(activity));
             activity.serverService.setApName(apName);
             activity.serverService.start();
-            activity.serverService.createServerSocket();
+//            activity.serverService.createServerSocket();
 
             Toast.makeText(activity,"سرور فعال شد",Toast.LENGTH_SHORT).show();
         }else{//disable server

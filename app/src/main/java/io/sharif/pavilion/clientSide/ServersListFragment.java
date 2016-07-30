@@ -10,17 +10,11 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 
 import io.sharif.pavilion.R;
 import io.sharif.pavilion.model.ServerObj;
-import io.sharif.pavilion.network.DataStructures.Message;
-import io.sharif.pavilion.network.Listeners.ClientListener;
-import io.sharif.pavilion.network.Listeners.ReceiveMessageListener;
-import io.sharif.pavilion.network.Listeners.WifiListener;
-import io.sharif.pavilion.network.Utilities.ActionResult;
 import io.sharif.pavilion.network.Utilities.Utility;
 import io.sharif.pavilion.utility.Statics;
 
@@ -39,7 +33,7 @@ public class ServersListFragment extends Fragment {
     @Override
     public void onAttach(Activity activity) {
         super.onAttach(activity);
-
+        this.activity= (ClientActivity) activity;
         //Make sure that the container Activity has implemented
         //the interface. if not, throw an exception so we can fix it
         try{
@@ -53,6 +47,7 @@ public class ServersListFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
+        this.activity= (ClientActivity) getActivity();
         return inflater.inflate(R.layout.headline_fragment, container, false);
     }
 
@@ -77,71 +72,13 @@ public class ServersListFragment extends Fragment {
 
 ////////////Initial ClientService:
 
-        activity.clientService=new CustomClientService(activity, new CustomWifiScanListener(activity,adapter,pd),
-                new ClientListener() {
-                    @Override
-                    public void onJoinedGroup() {
-pr("onJoinedGroup");
-                    }
 
-                    @Override
-                    public void onConnected() {
-pr("onConnected");
-                    }
-
-                    @Override
-                    public void onConnectionFailure() {
-
-                    }
-                    @Override
-                    public void onDisconnected() {
-pr("onDisconnected");
-                    }
-
-                    @Override
-                    public void onLeftGroup() {
-pr("onLeftGroup");
-                    }
-
-                    @Override
-                    public void onMessageReceived(Message message) {
-pr("onMessageReceived_message:"+message.getMessage());
-                    }
-                },
-                new WifiListener() {
-                    @Override
-                    public void onWifiEnabled() {
-pr("onWifiEnabled");
-                    }
-
-                    @Override
-                    public void onWifiDisabled() {
-pr("onWifiDisabled");
-                    }
-
-                    @Override
-                    public void onFailure(ActionResult errorCode) {
-pr("onFailure_errorCode:"+errorCode.name());
-                    }
-                },
-                new ReceiveMessageListener() {
-                    @Override
-                    public void onReceiveStart() {
-pr("onReceiveStart");
-                    }
-
-                    @Override
-                    public void onProgress(float progress, float speed, long totalSize, long received) {
-pr("onProgress_ progress:"+progress+" speed:"+speed+ "  totalSize:"+totalSize+"  received:"+received);
-                    }
-
-                    @Override
-                    public void onReceiveFailure(ActionResult errorCode) {
-pr("onReceiveFailure_errorCode:"+errorCode);
-                    }
-                });
+        CustomWifiScanListener wifiScanListener=new CustomWifiScanListener(activity,adapter,pd);
+        CustomClientListener clientListener=new CustomClientListener(activity);
+        CustomWifiListener wifiListener=new CustomWifiListener();
+        CustomReceiveMessageListener receiveMessageListener=new CustomReceiveMessageListener();
+        activity.clientService=new CustomClientService(activity,activity,adapter,wifiScanListener,clientListener,wifiListener,receiveMessageListener);
         activity.clientService.start();
-        Toast.makeText(activity,"starting scan...",Toast.LENGTH_LONG).show();
         activity.clientService.scan();
 
 //        adapter = new ServersListAdapter(serverObjs,activity,activity);

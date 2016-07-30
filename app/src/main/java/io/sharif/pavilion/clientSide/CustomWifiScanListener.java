@@ -1,7 +1,7 @@
 package io.sharif.pavilion.clientSide;
 
-import android.app.Activity;
 import android.app.ProgressDialog;
+import android.util.Log;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -13,14 +13,13 @@ import io.sharif.pavilion.network.DataStructures.ApInfo;
 import io.sharif.pavilion.network.Listeners.WifiScanListener;
 
 
-
 class CustomWifiScanListener implements WifiScanListener {
-    Activity activity;
+    ClientActivity clientActivity;
     ServersListAdapter adapter;
     ProgressDialog pd;
 
-    public CustomWifiScanListener(Activity activity, ServersListAdapter adapter, ProgressDialog pd) {
-        this.activity = activity;
+    public CustomWifiScanListener(ClientActivity activity, ServersListAdapter adapter, ProgressDialog pd) {
+        this.clientActivity = activity;
         this.adapter = adapter;
         this.pd = pd;
     }
@@ -28,7 +27,7 @@ class CustomWifiScanListener implements WifiScanListener {
     @Override
     public void onWifiScanFinished(List<ApInfo> scanResults) {
 
-        Toast.makeText(activity,"scan finished",Toast.LENGTH_LONG).show();
+        Toast.makeText(clientActivity,"scan finished",Toast.LENGTH_LONG).show();
 //        scanResults.add(new ApInfo("ghalamchi1","","1111","2222"));
 //        scanResults.add(new ApInfo("gaj1","","3333","4444"));
 
@@ -40,8 +39,10 @@ class CustomWifiScanListener implements WifiScanListener {
 //                adapter = new ServersListAdapter(s, activity, activity);
         adapter.updateList(s);
         pd.dismiss();
+
     }
-
-
+    public void pr(String msg){
+        Log.d("myPavilion",msg);
+    }
 
 }

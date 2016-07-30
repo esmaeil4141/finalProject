@@ -33,6 +33,7 @@ public class ContentsViewBuilder {
     public View getView(ContentsObj contentsObj){
         View v=inflater.inflate(R.layout.contents_layout,null);
         LinearLayout layout= (LinearLayout) v.findViewById(R.id.subjects_layout);
+
             for (SubjectObj subjectObj:contentsObj.getSubjectObjObjsList()){
 
                 if(subjectObj.getSubjectObjsList().size()==0){//small subject:

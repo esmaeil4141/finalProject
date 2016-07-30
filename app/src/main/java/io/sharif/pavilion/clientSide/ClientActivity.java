@@ -23,12 +23,14 @@ import io.sharif.pavilion.activities.HelpActivity;
 import io.sharif.pavilion.activities.SendProblemActivity;
 import io.sharif.pavilion.activities.SettingsActivity;
 import io.sharif.pavilion.model.ServerObj;
+import io.sharif.pavilion.network.DataStructures.ApInfo;
 import io.sharif.pavilion.serverSide.ServerActivity;
 
 public class ClientActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener, ServersListFragment.OnHeadlineSelectedListener{
     public  static Context context;
     CustomClientService clientService;
+    ApInfo connectedServerApInfo;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

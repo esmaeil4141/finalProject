@@ -18,7 +18,9 @@ public class ServerObj {//this object have all info of one server in clientSide
     int iconId;
     ContentsObj contentsObj;
     long lastTime;
+    ApInfo apInfo;
     public ServerObj(ApInfo apInfo, ContentsObj contentsObj){
+        this.apInfo=apInfo;
         String name=apInfo.getName();
         serverId=apInfo.getBSSID();
         serverName=name.substring(0,name.length()-1);
@@ -26,7 +28,11 @@ public class ServerObj {//this object have all info of one server in clientSide
         lastTime=System.currentTimeMillis();
     }
 
-    public ServerObj(String serverId, String serverName, String description, int iconId, ContentsObj contentsObj,long lastTime) {
+    public ApInfo getApInfo() {
+        return apInfo;
+    }
+
+    public ServerObj(String serverId, String serverName, String description, int iconId, ContentsObj contentsObj, long lastTime) {
         this.serverId = serverId;
         this.serverName = serverName;
         this.description = description;

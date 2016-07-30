@@ -8,6 +8,7 @@ import android.widget.TextView;
 
 import io.sharif.pavilion.R;
 import io.sharif.pavilion.model.ServerObj;
+import io.sharif.pavilion.network.DataStructures.ApInfo;
 
 
 public class MyViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener{
@@ -25,6 +26,7 @@ public class MyViewHolder extends RecyclerView.ViewHolder implements View.OnClic
         imageView=(ImageView)itemView.findViewById(R.id.icon_view);
         server_name= (TextView) itemView.findViewById(R.id.server_name);
         this.activity=activity;
+        Log.d("myPavilion","important activity:"+this.activity);
 
     }
     public void setServerObj(ServerObj serverObj){
@@ -32,9 +34,13 @@ public class MyViewHolder extends RecyclerView.ViewHolder implements View.OnClic
     }
     @Override
     public void onClick(View v) {
+        Log.d("myPavilion","inside onClick");
         ServersListFragment.OnHeadlineSelectedListener h=activity;
-        h.onServerSelected(serverObj);
-        Log.d("MyViewHolder.onClick","OKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKk");
+        ApInfo apInfo=serverObj.getApInfo();
+        activity.clientService.join(apInfo);
+
+//        h.onServerSelected(serverObj);
+        Log.d("MyViewHolder.onClick","OKKKKKKKKKKKKKKKKKKKk");
 
     }
 }

@@ -142,6 +142,7 @@ public class InputStreamHandler extends Thread implements ProgressMonitor.GetMon
 
             while (!Thread.currentThread().isInterrupted()) {
 
+
                 temp_int = dataInputStream.readInt(); // first int number is message ID
 
                 readBytes.set(0);
