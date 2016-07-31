@@ -79,7 +79,7 @@ public class ServersListFragment extends Fragment {
         CustomReceiveMessageListener receiveMessageListener=new CustomReceiveMessageListener();
         activity.clientService=new CustomClientService(activity,activity,adapter,wifiScanListener,clientListener,wifiListener,receiveMessageListener);
         activity.clientService.start();
-        activity.clientService.scan();
+//        activity.clientService.scan();// TODO: 2016/07/30
 
 //        adapter = new ServersListAdapter(serverObjs,activity,activity);
 //        headRecyclerView.setAdapter(adapter);

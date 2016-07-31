@@ -39,6 +39,16 @@ public class ContentsObj {//this object has all info of server's contents (title
     public ArrayList<SubjectObj> getSubjectObjObjsList() {
         return subjectObjObjsList;
     }
+
+    public ArrayList<Uri> getAllUris(){
+        ArrayList<Uri> uris=new ArrayList<>();
+        for (SubjectObj subjectObj:subjectObjObjsList){
+            if(subjectObj.getFileObj()!=null && subjectObj.getFileObj().getUri()!=null){
+                uris.add(subjectObj.getFileObj().getUri());
+            }
+        }
+        return uris;
+    }
 }
 
 

@@ -131,6 +131,7 @@ public class ClientService extends BroadcastReceiver {
             @Override
             public void run() {
                 try {
+                    Thread.sleep(6000);
                     serverSocket = new Socket(serverIP, ServerService.SERVER_PORT);
                     serverDataInputStream = new DataInputStream(serverSocket.getInputStream());
                     serverDataOutputStream = new DataOutputStream(serverSocket.getOutputStream());
@@ -162,6 +163,8 @@ public class ClientService extends BroadcastReceiver {
                                 clientListener.onConnectionFailure();
                             }
                         });
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
             }
         }).start();
@@ -245,7 +248,7 @@ public class ClientService extends BroadcastReceiver {
      * @return {@code FAILURE} if wifiManger is null or access point info is not valid, {@code SUCCESS} otherwise
      */
     public ActionResult join(ApInfo apInfo) {
-
+        Log.d("myPavilion","JOIN original ??");
         if (wifiManager == null || !isApInfoValid(apInfo)) return ActionResult.FAILURE;
 
         WifiConfiguration wifiConfig = new WifiConfiguration();
@@ -290,7 +293,6 @@ public class ClientService extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-
         if (wifiManager == null) return;
 
         String action = intent.getAction();
@@ -312,8 +314,10 @@ public class ClientService extends BroadcastReceiver {
                         if (connectedSSID != null && connectedSSID.startsWith(ServerService.SSID_PREFIX)) {
                             // already connected to a server which is created with the same app
                             serverIP = obtainServerIP();
-                            if (clientListener != null)
+                            if (clientListener != null) {
+                                Log.d("myPavilion", "clientListener.onJoinedGroup()!");
                                 clientListener.onJoinedGroup();
+                            }
                         }
                     } else if (state == State.DISCONNECTED) {
                         if (connectedSSID != null && connectedSSID.startsWith(ServerService.SSID_PREFIX)) {

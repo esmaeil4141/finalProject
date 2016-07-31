@@ -21,6 +21,7 @@ public class ServerObj {//this object have all info of one server in clientSide
     ApInfo apInfo;
     public ServerObj(ApInfo apInfo, ContentsObj contentsObj){
         this.apInfo=apInfo;
+        this.contentsObj=contentsObj;
         String name=apInfo.getName();
         serverId=apInfo.getBSSID();
         serverName=name.substring(0,name.length()-1);

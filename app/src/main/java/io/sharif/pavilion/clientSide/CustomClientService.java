@@ -32,6 +32,7 @@ public class CustomClientService extends ClientService{
         wifiScanPd=wifiScanListener.pd;
         joinPd=clientListener.pd;
     }
+
     public void pr(String msg){
         Log.d("myPavilion",msg);
     }
@@ -49,10 +50,11 @@ public class CustomClientService extends ClientService{
     @Override
         public ActionResult join(ApInfo apInfo){
         joinPd.show();
-
+        Log.d("myPavilion","JOIN CUsTOM ??");
         ActionResult result=super.join(apInfo);
         Log.d("myPavilion","on join _ apInfo: "+apInfo.getName()+" result:"+result.name());
         return result;
+
     }
 
 

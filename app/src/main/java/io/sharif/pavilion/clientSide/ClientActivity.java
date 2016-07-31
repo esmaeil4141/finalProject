@@ -46,11 +46,11 @@ public class ClientActivity extends AppCompatActivity
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-        clientService.scan();
-//                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-//                        .setAction("Action", null).show();
-//                Intent myIntent = new Intent(ClientActivity.this,ServerActivity.class);
-//                startActivity(myIntent);
+                if(clientService!=null){
+                    clientService.leave();
+                }
+                clientService.scan();
+
             }
         });
 
@@ -175,6 +175,7 @@ public void onBackPressed() {
         int id = item.getItemId();
 
         if (id == R.id.start_server) {
+            clientService.stop();
             Intent myIntent = new Intent(ClientActivity.this,ServerActivity.class);
             startActivity(myIntent);
         } else if (id == R.id.nav_send_problem) {

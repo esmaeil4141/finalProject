@@ -58,6 +58,16 @@ public class ServerActivity extends AppCompatActivity {
     }
 
     @Override
+    public void onDestroy() {
+
+        if(serverService!=null){
+            serverService.closeServerSocket();
+            serverService.stop();
+        }
+        super.onDestroy();
+    }
+
+    @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 

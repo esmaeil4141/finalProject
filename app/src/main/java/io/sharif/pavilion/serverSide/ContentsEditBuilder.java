@@ -5,6 +5,7 @@ import android.animation.AnimatorListenerAdapter;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.text.Spanned;
@@ -99,6 +100,7 @@ public class ContentsEditBuilder {
                     ImageButton attachButton= (ImageButton) smallView.findViewById(R.id.attach_button);
                     TextView fileNameTV= (TextView) smallView.findViewById(R.id.file_tv);
                     attachButton.setOnClickListener(new AttachListener(activity,fileNameTV,subjectObj,contentsObj));
+                    fileNameTV.setText(subjectObj.getFileObj().getFileName());
 
                     LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -356,6 +358,7 @@ class AddSmallSubjectListener implements View.OnClickListener{
         ImageButton attachButton= (ImageButton) smallView.findViewById(R.id.attach_button);
         TextView fileNameTV= (TextView) smallView.findViewById(R.id.file_tv);
         attachButton.setOnClickListener(new AttachListener(activity,fileNameTV,subjectObj,contentsObj));
+        fileNameTV.setText(subjectObj.getFileObj().getFileName());
 
         LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -463,97 +466,116 @@ String TAG="myPavilion";
 
                 @Override
                 public void onSocketCreateFailure() {
-                Log.d(TAG,"onSocketCreateFailure");
+                Log.d(TAG,"server onSocketCreateFailure");
                 }
 
                 @Override
                 public void onClientJoined(ClientDevice client) {
-                    Log.d(TAG,"onClientJoined");
+                    Log.d(TAG,"server onClientJoined");
 
                 }
 
                 @Override
                 public void onClientConnected(ClientDevice client) {
-                    Log.d(TAG,"onClientConnected");
+                    Log.d(TAG,"server onClientConnected");
 
                 }
 
                 @Override
                 public void onClientDisconnected(ClientDevice client) {
-                    Log.d(TAG,"onClientDisconnected");
+                    Log.d(TAG,"server onClientDisconnected");
 
                 }
 
                 @Override
                 public void onClientLeft(ClientDevice client) {
-                    Log.d(TAG,"onClientLeft");
+                    Log.d(TAG,"server onClientLeft");
 
                 }
 
                 @Override
                 public void onApEnabled() {
-                    Log.d(TAG,"onApEnabled");
+                    Log.d(TAG,"server onApEnabled");
 
                 }
 
                 @Override
                 public void onServerStarted() {
-                    Log.d(TAG,"onServerStarted");
+                    Log.d(TAG,"server onServerStarted");
                     activity.serverService.createServerSocket();
 
                 }
 
                 @Override
                 public void onSocketCreated() {
-                    Log.d(TAG,"onSocketCreated");
+                    Log.d(TAG,"server onSocketCreated");
 
                 }
 
                 @Override
                 public void onSocketClosed() {
-                    Log.d(TAG,"onSocketClosed");
+                    Log.d(TAG,"server onSocketClosed");
 
                 }
 
                 @Override
                 public void onServerStopped() {
-                    Log.d(TAG,"onServerStopped");
+                    Log.d(TAG,"server onServerStopped");
 
                 }
 
                 @Override
                 public void onApDisabled() {
-                    Log.d(TAG,"onApDisabled");
+                    Log.d(TAG,"server onApDisabled");
 
                 }
 
                 @Override
-                public void onMessageReceived(String clientID, Message message) {
-                    Log.d(TAG,"onMessageReceived id:"+message.getID()+" message:"+message.getMessage());
-                    Message serverMessage=new Message(10);
+                public void onMessageReceived(final String clientID, Message message) {
+                    Log.d(TAG,"server onMessageReceived id:"+message.getID()+" message:"+message.getMessage());
+                    final Message serverMessage=new Message(0);
 //                    serverMessage.setMessage(Statics.getServerContents(activity).getJson());
-                    serverMessage.setMessage(Statics.getFakeSavedServers(activity).get(0).getJson());
+                    ContentsObj contents=Statics.getServerContents(activity);
+                    for(Uri uri:contents.getAllUris()){
+                        message.addUri(uri);
+                    }
+//                    serverMessage.setMessage(Statics.getFakeSavedServers(activity).get(0).getJson());//TODO fix this
+                    serverMessage.setMessage(contents.getJson());//TODO fix this
                     //TODO null problems in
                     //TODO get all uri from contents and add them to message
-                    SendMessageListener sendMessageListener=new SendMessageListener() {
+
+                    Log.d("myPavilion","SEVER URI ADD:"+contents.getAllUris().size());
+                    for (Uri uri:contents.getAllUris()){
+                        serverMessage.addUri(uri);
+                    }
+
+                    final SendMessageListener sendMessageListener=new SendMessageListener() {
                         @Override
                         public void onMessageSent(int msgID) {
-
+                            Log.d("myPavilion","server_ onMessageSent");
                         }
 
                         @Override
                         public void onProgress(float progress, float speed, long totalSize, long sent) {
+                            Log.d("myPavilion","server_ onProgress");
 
                         }
 
                         @Override
                         public void onFailure(ActionResult errorCode) {
+                            Log.d("myPavilion","server_ onFailure _ errorCode:"+errorCode.name());
 
                         }
                     };
                     switch (message.getID()){
                         case 0:
-                            activity.serverService.sendMessage(clientID,serverMessage,sendMessageListener);
+                            Log.d("myPavilion","server inside receive message");
+                            new Thread(){
+                                @Override
+                                public void run(){
+                                    activity.serverService.sendMessage(clientID,serverMessage,sendMessageListener);
+                                }
+                            }.start();
                             break;
                         case 1:
                             break;
@@ -583,6 +605,7 @@ String TAG="myPavilion";
                 }
             } );
             String apName=Statics.getServerName(activity)+Statics.convertNumToCharacter(Statics.getServerIconId(activity));
+
             activity.serverService.setApName(apName);
             activity.serverService.start();
 //            activity.serverService.createServerSocket();

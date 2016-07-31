@@ -2,6 +2,7 @@ package io.sharif.pavilion.clientSide;
 
 import android.app.Fragment;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -44,6 +45,7 @@ public class ConnectedServerFragment extends Fragment {
         LinearLayout containerOfContents= (LinearLayout) v.findViewById(R.id.container_of_contents);
         containerOfContents.removeAllViews();
         ContentsViewBuilder contentsViewBuilder=new ContentsViewBuilder(activity);
+        Log.d("myPavilion","serverObj"+serverObj.getJson());
         View contentsView=contentsViewBuilder.getView(serverObj.getContentsObj());
         containerOfContents.addView(contentsView);
 

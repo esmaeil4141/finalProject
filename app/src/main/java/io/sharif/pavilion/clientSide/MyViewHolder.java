@@ -35,12 +35,13 @@ public class MyViewHolder extends RecyclerView.ViewHolder implements View.OnClic
     @Override
     public void onClick(View v) {
         Log.d("myPavilion","inside onClick");
-        ServersListFragment.OnHeadlineSelectedListener h=activity;
+//        ServersListFragment.OnHeadlineSelectedListener h=activity;
         ApInfo apInfo=serverObj.getApInfo();
+        Log.d("myPavilion","click to join: "+apInfo.getName());
         activity.clientService.join(apInfo);
 
 //        h.onServerSelected(serverObj);
-        Log.d("MyViewHolder.onClick","OKKKKKKKKKKKKKKKKKKKk");
+        Log.d("MyViewHolder.onClick","OKKKKKKKKKKk");
 
     }
 }

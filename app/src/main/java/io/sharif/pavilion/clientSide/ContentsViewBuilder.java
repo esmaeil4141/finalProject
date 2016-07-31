@@ -1,24 +1,20 @@
 package io.sharif.pavilion.clientSide;
 
 import android.app.Activity;
-import android.content.ActivityNotFoundException;
-import android.content.Intent;
-import android.net.Uri;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.webkit.MimeTypeMap;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.io.File;
+import java.io.IOException;
 
 import io.sharif.pavilion.R;
 import io.sharif.pavilion.model.contents.ContentsObj;
 import io.sharif.pavilion.model.contents.SubjectObj;
-
+import io.sharif.pavilion.network.Utilities.Utility;
 
 
 public class ContentsViewBuilder {
@@ -31,6 +27,7 @@ public class ContentsViewBuilder {
 
 
     public View getView(ContentsObj contentsObj){
+        Log.d("myPavilion","invoke getView contentsObj:"+contentsObj);
         View v=inflater.inflate(R.layout.contents_layout,null);
         LinearLayout layout= (LinearLayout) v.findViewById(R.id.subjects_layout);
 
@@ -47,7 +44,7 @@ public class ContentsViewBuilder {
                     TextView fileNameTV= (TextView) smallView.findViewById(R.id.file_tv);
                     if(subjectObj.getFileObj()!=null) {
                         fileNameTV.setText(subjectObj.getFileObj().getFileName());
-                        String path=subjectObj.getFileObj().getFilePath();
+                        String path= Utility.getAppFolderPath()+subjectObj.getFileObj().getFileName();
                         attachButton.setOnClickListener(new AttachShowListener(activity,path));//TODO correct path...
                         Log.d("path",path);
 
@@ -102,16 +99,25 @@ class AttachShowListener implements View.OnClickListener{
 
     @Override
     public void onClick(View v) {
-        MimeTypeMap myMime = MimeTypeMap.getSingleton();
-        Intent newIntent = new Intent(Intent.ACTION_VIEW);
-        String mimeType = myMime.getMimeTypeFromExtension(fileExt(file).substring(1));
-        newIntent.setDataAndType(Uri.fromFile(new File(file)),mimeType);
-        newIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        File newFile=new File(file);
+        Log.d("File",file);
         try {
-            activity.startActivity(newIntent);
-        } catch (ActivityNotFoundException e) {
-            Toast.makeText(activity, "No handler for this type of file.", Toast.LENGTH_SHORT).show();
+            new FileOpen().openFile(v.getContext(),newFile);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+//        MimeTypeMap myMime = MimeTypeMap.getSingleton();
+//        Intent newIntent = new Intent(Intent.ACTION_VIEW);
+//        String mimeType = myMime.getMimeTypeFromExtension(fileExt(file).substring(1));
+//        File newFile=new File(file);
+//        newIntent.setDataAndType(Uri.fromFile(newFile),mimeType);
+//        Log.d("myPavilion","File name:"+newFile.getName() +" path:"+newFile.getPath()+" absolutePath: "+newFile.getAbsolutePath());
+//        newIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+//        try {
+//            activity.startActivity(newIntent);
+//        } catch (ActivityNotFoundException e) {
+//            Toast.makeText(activity, "No handler for this type of file.", Toast.LENGTH_SHORT).show();
+//        }
     }
 
     private String fileExt(String url) {
